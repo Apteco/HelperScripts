@@ -72,6 +72,14 @@ $functionsSubfolder = "functions"
 $settingsFilename = "settings.json"
 $processId = [guid]::NewGuid()
 $moduleName = "GETMAILINGS"
+
+# Load settings
+$settings = Get-Content -Path "$( $scriptPath )\$( $settingsFilename )" -Encoding UTF8 -Raw | ConvertFrom-Json
+
+# append a suffix, if in debug mode
+if ( $debug ) {
+    $logfile = "$( $logfile ).debug"
+}
 ```
 
 # Loading all functions from a subfolder
@@ -85,5 +93,20 @@ $moduleName = "GETMAILINGS"
 
 Get-ChildItem ".\$( $functionsSubfolder )" -Filter "*.ps1" -Recurse | ForEach {
     . $_.FullName
+}
+```
+
+# Other settings
+
+## Activate TLS 1.x and SSL3
+
+```PowerShell
+if ( $settings.changeTLS ) {
+    $AllProtocols = @(    
+        [System.Net.SecurityProtocolType]::Tls12
+        #[System.Net.SecurityProtocolType]::Tls13,
+        ,[System.Net.SecurityProtocolType]::Ssl3
+    )
+    [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
 }
 ```
