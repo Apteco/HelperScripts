@@ -73,3 +73,17 @@ $settingsFilename = "settings.json"
 $processId = [guid]::NewGuid()
 $moduleName = "GETMAILINGS"
 ```
+
+# Loading all functions from a subfolder
+
+```PowerShell
+################################################
+#
+# FUNCTIONS
+#
+################################################
+
+Get-ChildItem ".\$( $functionsSubfolder )" -Filter "*.ps1" -Recurse | ForEach {
+    . $_.FullName
+}
+```
