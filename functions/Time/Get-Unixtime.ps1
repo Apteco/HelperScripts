@@ -1,4 +1,12 @@
-﻿# current unixtimestamp with the optional milliseconds
+﻿<#
+
+NOTES
+
+Source: https://github.com/gitfvb/AptecoHelperScripts/blob/master/functions/Time/Get-Unixtime.ps1
+
+#>
+
+# current unixtimestamp with the optional milliseconds
 Function Get-Unixtime {
     
     param(
