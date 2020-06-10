@@ -1,12 +1,40 @@
 ﻿<#
+ .SYNOPSIS
+  Shows the current time as a unix timestamp
 
-NOTES
+ .DESCRIPTION
+  Unixtime is always UTC
 
-Source: https://github.com/gitfvb/AptecoHelperScripts/blob/master/functions/Time/Get-Unixtime.ps1
+ .PARAMETER  inMilliseconds
+  Just use this to parameter [switch] if you want the timestamp with milliseconds
+
+ .PARAMETER  timestamp
+  Just input a [DateTime] object to calculate another timestamp
+
+ .NOTES
+ Name: Get-Unixtime.ps1
+ Author: Florian von Bracht
+ DateCreated: yyyy-mm-dd
+ DateUpdated: 2020-06-10
+ Site: https://github.com/gitfvb/
+
+ .LINK
+ Site: https://github.com/gitfvb/AptecoHelperScripts/blob/master/functions/Time/Get-Unixtime.ps1
+
+ .EXAMPLE
+   # Shows the current unix timestamp
+   Get-Unixtime
+
+ .EXAMPLE
+   # Shows the current unix timestamp with Millseconds
+   Get-Unixtime -inMilliseconds
+
+ .EXAMPLE
+   # Shows the unix timestamp from two days ago
+   Get-Unixtime -inMilliseconds -timestamp ( Get-Date ).AddDays(-2)
 
 #>
 
-# current unixtimestamp with the optional milliseconds
 Function Get-Unixtime {
     
     param(
@@ -20,7 +48,7 @@ Function Get-Unixtime {
         $multiplier = 1000
     }
 
-    [long]$unixtime = [double]::Parse((Get-Date ($timestamp).ToUniversalTime() -UFormat %s)) * $multiplier
+    [uint64]$unixtime = [double]::Parse((Get-Date ($timestamp).ToUniversalTime() -UFormat %s)) * $multiplier
 
    return $unixtime 
 
