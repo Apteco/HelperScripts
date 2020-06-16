@@ -44,13 +44,18 @@ Function Read-Sqlite {
     $separator = "`t"
     $newline = "###"
 
+    # Call an external program first so the console encoding command works in ISE, too. Good explanation here: https://social.technet.microsoft.com/Forums/scriptcenter/en-US/b92b15c8-6854-4d3e-8a35-51b4b56276ba/powershell-ise-vs-consoleoutputencoding?forum=ITCG
+    ping | Out-Null
+
+    # Change the console output to UTF8
+    $originalConsoleCodePage = [Console]::OutputEncoding.CodePage
     [Console]::OutputEncoding = [text.encoding]::utf8
-    $results = (( ".headers on", $query | & $sqliteExe -separator $separator -newline $newline $sqliteDb.Replace("\", "/") ) -join "`r" ) -replace $newline,"`r`n" | ConvertFrom-Csv -Delimiter $separator
-    [Console]::OutputEncoding = [text.encoding]::Default
 
     # Query the database
     $results = (( ".headers on", $query | & $sqliteExe -separator $separator -newline $newline $sqliteDb.Replace("\", "/") ) -join "`r" ) -replace $newline,"`r`n"  | ConvertFrom-Csv -Delimiter $separator 
     
+    # Change the console output to the default
+    [Console]::OutputEncoding = [text.encoding]::GetEncoding($originalConsoleCodePage)
 
     # Return the results
     return $results
