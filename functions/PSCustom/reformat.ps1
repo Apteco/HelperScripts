@@ -39,12 +39,13 @@ Id Name       Value
         ,[Parameter(Mandatory=$true)][String] $idPropertyName 
         ,[Parameter(Mandatory=$false)][Switch] $removeEmptyValues = $false
     )
+
     BEGIN {}
     PROCESS {
         $psobject | foreach {
             $id = $_.$idPropertyName 
-            $_.psobject.properties | foreach {
-                if ( "" -ne $_.Value -or $removeEmptyValues -ne $true ) {
+            $_.psobject.properties | foreach {                
+                if ( $_.Value.length -gt 0 -or $removeEmptyValues -ne $true ) {                     
                     [PSCustomObject]@{
                         "Id" = $id
                         "Name" = $_.Name 
@@ -95,6 +96,7 @@ Id   Tag
         ,[Parameter(Mandatory=$true)][String] $idPropertyName
         ,[Parameter(Mandatory=$true)][String] $arrPropertyName
     )
+
     BEGIN {}
     PROCESS {
         $psobject | foreach {
@@ -108,4 +110,5 @@ Id   Tag
         }
     }
     END {}
+    
 }
