@@ -32,25 +32,55 @@ Id Name       Value
 5  city       Berlin
 5  firstname  Sascha
 
+You can also define multiple IDs with a call like this
+
+$t | Format-KeyValue -idPropertyName id,group_id -removeEmptyValues
+
+to get multiple ids as columns like this
+
+id   group_id Name              Value                                                               
+--   -------- ----              -----                                                               
+666  1112144  communication_key be66add3-d60a-ea11-a406-004e019d9caa                                
+666  1112144  discount          20%                                                                 
+666  1112144  first_name        James                                                               
+666  1112144  urn               1                                                                   
+2345 1112144  communication_key b666add3-d60a-ea11-a406-004e019d9caa                                
+2345 1112144  discount          20%                                                                 
+2345 1112144  first_name        Stuart                                                              
+2345 1112144  urn               79       
+
 #>
 
     param(
          [Parameter(ValueFromPipeline,Mandatory=$true)][PSCustomObject[]] $psobject
-        ,[Parameter(Mandatory=$true)][String] $idPropertyName 
+        ,[Parameter(Mandatory=$true)][String[]] $idPropertyName 
         ,[Parameter(Mandatory=$false)][Switch] $removeEmptyValues = $false
     )
 
     BEGIN {}
     PROCESS {
+        $idNames = $idPropertyName -split ","
         $psobject | foreach {
-            $id = $_.$idPropertyName 
+            #$ids = $idNames | ForEach {}
+            #$id = $_.$idPropertyName 
+            $curObject = $_
             $_.psobject.properties | foreach {                
-                if ( $_.Value.length -gt 0 -or $removeEmptyValues -ne $true ) {                     
+                if ( ( $_.Value.length -gt 0 -or $removeEmptyValues -ne $true ) -and $idNames -notcontains $_.Name ) {                                         
+                    $newObj = New-Object PSCustomObject
+                    $idNames | ForEach {                   
+                        $newObj | Add-Member -MemberType NoteProperty -Name $_ -Value $curObject.$_
+                    }
+                    $newObj | Add-Member -MemberType NoteProperty -Name "Name" -Value $_.Name
+                    $newObj | Add-Member -MemberType NoteProperty -Name "Value" -Value $_.Value
+                    $newObj
+                    <#
                     [PSCustomObject]@{
                         "Id" = $id
                         "Name" = $_.Name 
                         "Value" = $_.Value  
                     }
+                    #>
+
                 }
             } 
         }
