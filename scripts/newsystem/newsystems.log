@@ -1,0 +1,6 @@
+﻿20200716131227	a26a4093-9d71-460e-a542-04d1a7d5fbd0	----------------------------------------------------
+20200716131227	a26a4093-9d71-460e-a542-04d1a7d5fbd0	add_admin_for_new_system
+20200716131227	a26a4093-9d71-460e-a542-04d1a7d5fbd0	using instance 'F9517BC'
+20200716131227	a26a4093-9d71-460e-a542-04d1a7d5fbd0	Executed '10__usercontrol.sql' with the result of '1' records
+20200716131227	a26a4093-9d71-460e-a542-04d1a7d5fbd0	Executed '11__roles_step1.sql' with the result of '1' records
+20200716131227	a26a4093-9d71-460e-a542-04d1a7d5fbd0	Executed '12__roles_step2.sql' with the result of '1' records
