@@ -1,12 +1,13 @@
-﻿
+
 
 Function Invoke-SqlServer {
 
     param(
-         [Parameter(Mandatory=$true)][String]$instance
-        ,[Parameter(Mandatory=$true)][String]$database
-        ,[Parameter(Mandatory=$true)][String[]]$query
-        ,[Parameter(Mandatory=$false)][Switch]$executeScalar = $false
+         [Parameter(Mandatory=$true)][String]$instance        
+        ,[Parameter(Mandatory=$true)][AllowEmptyString()][String[]]$query
+        ,[Parameter(Mandatory=$false)][String]$database = "master"
+        ,[Parameter(Mandatory=$false)][Switch]$executeScalar = $false # Returns the first column in the first row
+        ,[Parameter(Mandatory=$false)][Switch]$executeNonQuery = $false # Return the number of affected records (used for inserts, updates, deletes)
     )
 
     $connectionString = "Data Source=$( $instance );Initial Catalog=$( $database );Trusted_Connection=True;Connect Timeout=2400;"
@@ -24,7 +25,10 @@ Function Invoke-SqlServer {
         $command = $connection.CreateCommand()
         $command.CommandText = $query
         
-        If ( $executeScalar ) {
+        
+        If ( $executeNonQuery ) {
+            $result = $command.ExecuteNonQuery()
+        } elseif ( $executeScalar ) {
             $result = $command.ExecuteScalar()
         } else {
              # create datatable
@@ -33,11 +37,8 @@ Function Invoke-SqlServer {
             # load data
             $result.Load($sqlResult, [System.Data.Loadoption]::Upsert)
         }
+        
 
-        
-    
-        
-           
 
     } catch [System.Exception] {
 
@@ -49,8 +50,6 @@ Function Invoke-SqlServer {
     
         # close connection
         $connection.Close() 
-
-        
 
     }
 
