@@ -5,11 +5,11 @@ https://mcpmag.com/articles/2018/03/16/wait-action-function-powershell.aspx?m=1
 Use like
 
 $scriptblock={Test-Path -Path 'c:\IExist.txt' -PathType Leaf};
-Wait-Action -Condition $scriptblock -Timeout 60 -RetryInterval 1;
+Wait-Action -Condition $scriptblock -Timeout 60 -$RetryInterval 1;
 
 -or-
 
-Wait-Action -Condition {Test-Path -Path 'c:\IExist.txt' -PathType Leaf} -Timeout 60 -RetryInterval 1;
+Wait-Action -Condition {Test-Path -Path 'c:\IExist.txt' -PathType Leaf} -Timeout 60 -$RetryInterval 1;
 
 Timeout in seconds
 
