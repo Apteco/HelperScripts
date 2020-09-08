@@ -87,6 +87,7 @@ $settings = @{
     
     # Timer
     timerTimeout = 180 # seconds until the event gets triggered, a new file resets the timer
+    interval = 1 # check and refresh the script every n seconds
 
     # Script to trigger when timerTimeout is reached
     csvToSqliteScript = "D:\Scripts\Watcher\do_something_else.ps1"
@@ -171,7 +172,7 @@ if ( $paramsExisting ) {
 #-----------------------------------------------
 
 $timer = New-Object -Type Timers.Timer
-$timer.Interval  = 1000 # milliseconds, the interval defines how often the event gets fired
+$timer.Interval  = ( $settings.interval * 1000 ) # milliseconds, the interval defines how often the event gets fired
 $Global:timerStartTime = Get-Date # needs to be global so the events can change it
 $timerTimeout = $settings.timerTimeout # seconds to timeout
 
@@ -192,7 +193,7 @@ Register-ObjectEvent -InputObject $timer  -EventName "Elapsed" -SourceIdentifier
     $timeSpan = New-TimeSpan -Start $currentStart -End ( Get-Date )
 
     # Is timeout reached? Do something!
-    if ( $timeSpan.Seconds -gt $timeout ) {
+    if ( $timeSpan.TotalSeconds -gt $timeout ) {
         
         # Load functions for logging and more only when needed        
         $scriptblock = [System.Management.Automation.ScriptBlock]::Create($Event.MessageData.functions)
@@ -221,7 +222,7 @@ Register-ObjectEvent -InputObject $timer  -EventName "Elapsed" -SourceIdentifier
     }
     
     # Output the results to console
-    Write-Host -NoNewLine "`r$( $timeSpan.Seconds )/$( $timeout )"
+    Write-Host -NoNewLine "`r$( $timeSpan.TotalSeconds )/$( $timeout )"
 
 } | Out-Null
 
@@ -298,7 +299,7 @@ Register-ObjectEvent -InputObject $watcher -EventName "Created" <#-SourceIdentif
 
 # Keep this process running otherwise the filewatcher will be removed
 while ($true){
-  Start-Sleep -Seconds 20
+  Start-Sleep -Seconds $settings.interval
 }
 
 
