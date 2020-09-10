@@ -217,7 +217,7 @@ Register-ObjectEvent -InputObject $timer  -EventName "Elapsed" -SourceIdentifier
 
         # Build system
         #& DesignerConsole.exe "$( $settings.buildDesign )" /load
-        #Start-Process DesignerConsole.exe -ArgumentList "$( $settings.buildDesign ) /load" -Wait
+        #Start-Process DesignerConsole.exe -ArgumentList """$( $settings.buildDesign )"" /load" -Wait
 
     }
     
