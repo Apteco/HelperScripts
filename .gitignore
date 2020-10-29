@@ -1,4 +1,5 @@
 
+*.log
 *.zip
 *.html
 *.txt
