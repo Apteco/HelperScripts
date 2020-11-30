@@ -80,14 +80,6 @@ $timestamp = [datetime]::Now
 # Load settings
 #$settings = Get-Content -Path "$( $scriptPath )\$( $settingsFilename )" -Encoding UTF8 -Raw | ConvertFrom-Json
 
-# Allow only newer security protocols
-# hints: https://www.frankysweb.de/powershell-es-konnte-kein-geschuetzter-ssltls-kanal-erstellt-werden/
-if ( $settings.changeTLS ) {
-    $AllProtocols = @(    
-        [System.Net.SecurityProtocolType]::Tls12
-    )
-    [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
-}
 
 # TODO  [ ] unify settings in json file
 $settings = @{
@@ -125,6 +117,16 @@ $settings = @{
     }
     
 }
+
+# Allow only newer security protocols
+# hints: https://www.frankysweb.de/powershell-es-konnte-kein-geschuetzter-ssltls-kanal-erstellt-werden/
+if ( $settings.changeTLS ) {
+    $AllProtocols = @(    
+        [System.Net.SecurityProtocolType]::Tls12
+    )
+    [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
+}
+
 
 # Items to backup
 $itemsToBackup = @(
@@ -260,6 +262,10 @@ Write-Log -message "Setting for creating backups $( $settings.backupSqlite )"
 if ( $settings.backupSqlite -and ( Check-Path -Path $settings.sqliteDb )) {
     
     # TODO [ ] put these into settings
+    # Create backup folder if not present
+    If ( -not ( Check-Path -Path $settings.backupDir )) {
+        New-Item -Path $settings.backupDir -ItemType Directory
+    }
     
 
     # Create backup subfolder
@@ -289,6 +295,7 @@ if ( $settings.backupSqlite -and ( Check-Path -Path $settings.sqliteDb )) {
     }
 
 }
+
 
 
 ################################################
