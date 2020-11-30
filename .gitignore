@@ -5,3 +5,6 @@
 *.txt
 *.debug
 *.sqlite
+*.key
+*.json
+_archive
