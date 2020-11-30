@@ -4,3 +4,4 @@
 *.html
 *.txt
 *.debug
+*.sqlite
