@@ -135,7 +135,7 @@ Function Convert-XMLtoPSObject {
       # Decide if go recursively or use the current value
       if ($n.HasChildNodes) {
         if ($n.ChildNodes.Count -gt 1) {
-          $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n )
+          $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n -attributesPrefix $attributesPrefix )
         } else {
           if ($n.ChildNodes[0].NodeType -eq [System.Xml.XmlNodeType]::Text) {
             # Handle attributes of childrens tag
@@ -158,7 +158,7 @@ Function Convert-XMLtoPSObject {
               $value = $n.ChildNodes[0].Value
             }            
           } else {
-            $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n )
+            $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n -attributesPrefix $attributesPrefix )
           }
         }
       } else {
