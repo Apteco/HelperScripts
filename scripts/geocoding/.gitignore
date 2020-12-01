@@ -1,0 +1,8 @@
+
+*.txt
+settings.json
+aes.key
+*.log
+dev/
+*.csv
+*.tmp
