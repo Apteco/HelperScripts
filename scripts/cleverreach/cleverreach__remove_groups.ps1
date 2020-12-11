@@ -65,7 +65,7 @@ $settings = @{
     changeTLS = $true
     #loadArchivedRecords = $true
     pageLimitGet = 100 # Max amount of records to download with one API call
-    logfile = "$( $scriptPath )\cleverreach_deactivate.log"
+    logfile = "$( $scriptPath )\cleverreach_groups_remove.log"
     token = "<token>"
     
    # details to load from cleverreach per receiver
@@ -236,86 +236,29 @@ $groups = Invoke-RestMethod -Method Get -Uri $groupsUrl -Headers $header
 
 Write-Log -message "Found '$( $groups.Count )' groups"
 
+
 #-----------------------------------------------
 # ASK FOR GROUPS TO DO SOMETHING
 #-----------------------------------------------
 
 $groupsSelection = $groups |  Out-GridView -PassThru
+#$groups | export-csv -path ".\groups.csv" -Delimiter "`t" -Encoding UTF8 -NoTypeInformation
 
-
+#exit 0
 ################################################
 #
-# DOWNLOAD ALL GROUPS RECEIVERS
+# REMOVING GROUPS
 #
 ################################################
 
-# Download all data and one call per group
+Write-Log -message "Downloading all groups/lists"
 
-# write all single groups and additional attributes
-$detailLevel = $cleverReachDetailsBinary # Detail depth (bitwise combinable) (0: none, 1: events, 2: orders, 4: tags).
-#$attributes = Invoke-RestMethod -Method Get -Uri "$( $settings.base )attributes.json" -Headers $header -Verbose # load global attributes first
-#$contacts = @()
-
+$results = @()
 $groupsSelection | ForEach {
-    
-    $groupId = $_.id
-    $page = 0
-    Write-Log -message "Downloading group id $( $groupId )"
-    
-    # Downloading attributes
-    #$attributes += Invoke-RestMethod -Method Get -Uri "$( $groupsUrl )/$( $groupId )/attributes" -Headers $header -Verbose # add local attributes
-    $upload = @()
-    do {
-
-        $url = "$( $groupsUrl )/$( $groupId )/receivers?pagesize=$( $settings.pageLimitGet )&page=$( $page )&detail=$( $detailLevel )&type=active" # active|inactive
-        $result = Invoke-RestMethod -Method Get -Uri $url -Headers $header -Verbose
-
-        #$contacts += $result
-        
-        #Write-Log -message "Loaded $( $result.count ) 'contacts' in total"
-
-
-        if ( $result.Count -gt 0 ) {
-
-            #-----------------------------------------------
-            # CREATE UPSERT OBJECT
-            #-----------------------------------------------
-
-
-            $uploadObject = @()
-            For ($i = 0 ; $i -lt $result.count ; $i++ ) {
-
-                $uploadEntry = [PSCustomObject]@{
-                    email = $result[$i].email
-                    deactivated = 1
-                }
-
-                $uploadObject += $uploadEntry
-
-            }
-
-
-            #-----------------------------------------------
-            # UPSERT DATA INTO GROUP
-            #-----------------------------------------------
-
-            $object = "groups"
-            $endpoint = "$( $groupsUrl )/$( $groupId )/receivers/upsertplus"
-            $bodyJson = $uploadObject | ConvertTo-Json
-            $contentType = "application/json;charset=utf-8"
-
-            $upload += Invoke-RestMethod -Uri $endpoint -Method Post -Headers $header -Body $bodyJson -ContentType $contentType -Verbose 
-
-            Write-Log -message "Deactivated $( $upload.count ) 'contacts' in total"
-
-        }
-
-        #$page += 1
-
-    } while ( $result.Count -eq $settings.pageLimitGet )
-    
-    Write-Log -message "Done with deactivating $( $upload.count ) 'contacts' in group '$( $groupId )'"
-
+    $group = $_
+    Write-Log -message "Removing group $( $group.id ) - $( $group.name )"
+    $groupsUrl = "$( $settings.base )groups.json/$( $group.id )"
+    $results += Invoke-RestMethod -Method Delete -Uri $groupsUrl -Headers $header -Verbose
 }
 
 
