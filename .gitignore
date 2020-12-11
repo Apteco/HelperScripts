@@ -8,3 +8,5 @@
 *.key
 *.json
 _archive
+*.csv
+_dev
