@@ -6,7 +6,7 @@ $smtpPassEncrypted = Get-PlaintextToSecure ((New-Object PSCredential "dummy",$sm
 $settings = @{
     ...
     "mail" = @{
-        smptServer = "smtp.example.com"
+        smtpServer = "smtp.example.com"
         port = 587
         from = "admin@example.com"
         username = "admin@example.com"
