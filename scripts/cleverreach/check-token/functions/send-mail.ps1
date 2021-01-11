@@ -49,7 +49,9 @@ Function Send-Mail {
 
         # build the credentials object from the settings
         $cred = New-Object System.Management.Automation.PSCredential $settings.mail.username, ( Get-SecureToPlaintext $settings.mail.password | ConvertTo-SecureString -asplaintext -force  )
-
+        if ( $settings.mail.deactivateServerCertificateValidation ) {
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { return $true }
+        }
     }
 
     process {
@@ -61,7 +63,7 @@ Function Send-Mail {
             Subject = $subject
             Body = $body
             SmtpServer = $settings.mail.smtpServer 
-            From = $settings.mail.from 
+            From = $settings.mail.from
             UseSsl = $true
             Port = $settings.mail.port
             Credential = $cred

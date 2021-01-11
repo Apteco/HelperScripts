@@ -66,6 +66,7 @@ $smtpPassEncrypted = Get-PlaintextToSecure ((New-Object PSCredential "dummy",$sm
     from = "admin@example.com"
     username = "admin@example.com"
     password = $smtpPassEncrypted
+    deactivateServerCertificateValidation = $true # $true|$false
 }
 
 
