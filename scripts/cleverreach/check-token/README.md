@@ -40,6 +40,12 @@ If the notifications should be send, make sure to configure the mail settings
     }
 ```
 
+For debugging purposes change this path in the file `cleverreach__05__check_token.ps1` to the correct path of the script
+
+```
+scriptPath= "C:\Users\Florian\Documents\GitHub\AptecoCustomChannels\CleverReach"`
+```
+
 # Method 1 - Designer Action
 
 * Change the script as described above
@@ -58,4 +64,30 @@ If the notifications should be send, make sure to configure the mail settings
 
 # Configure PeopleStage to read token
 
-* This will follow soon when released
+## Channel Editor
+
+Add the new parameter `Access Token Path` and change it to the local path where the token is saved
+
+![grafik](https://user-images.githubusercontent.com/14135678/104179067-93719500-540b-11eb-92db-f3b8d8cdd9ec.png)
+
+## Response Gatherer
+
+Add the new parameter `ACCESSTOKENPATH` and change it to the local path where the token is saved
+
+![grafik](https://user-images.githubusercontent.com/14135678/104179240-d3387c80-540b-11eb-9ab4-f963fac445e0.png)
+
+
+# Troubleshooting
+
+```
+Send-MailMessage : Das Remotezertifikat ist laut Validierungsverfahren ungültig
+The remote certificate is invalid according to the validation procedure.
+```
+
+When generating the settings.json file, set `deactivateServerCertificateValidation` to `$true` (Default `$false`)
+
+```
+Unable to relay recipient in non-accepted domain
+```
+
+Check your mailserver, looks like the (external) recipient is not allowed by the current settings
