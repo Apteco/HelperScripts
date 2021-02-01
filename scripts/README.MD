@@ -9,5 +9,6 @@ filewaiter|This Script watches a specific folder and is waiting for 1 or multipl
 filewatcher|Create an automatic "Watchdog" to do something with files if they are getting created/deleted/changed etc. on a specific directory. This example is looking at a folder and looking for new files, waiting until the file has finally arrived and move it then to another place.
 geocoding|Automatic geocoding against Bing Maps API to batch geocode addresses (200k per call). This needs a Bing Maps Enterprise license.
 hash_column_in_csv|Hash a column in a csv file so it can be anonymised or pseudonomised.
+housekeeping|For a SQLServer if you want to remove log entries and shrink the databases automatically.
 newsystem|If you have a global user database then this script helps you to add the first user `administrator` for that system to the global user database. Afterwards you can login with that user and add more users from the global user inventory. Just download the whole folder `newsystem`, open the `new_admin_for_new_system.ps1` to change some settings (normally only the sqlserver instance) in `$settings` and then you are good to go to execute that script. It then asks you for the new systemname and the administrator entries will be created.
 orbit-api|Collection of examples on how to use the Orbit API like executing queries, export data and uploading data
