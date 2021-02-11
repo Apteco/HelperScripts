@@ -54,7 +54,9 @@ Function Retry-Command
 Function Write-Log {
 
     param(
-         [Parameter(Mandatory=$true)][String]$message
+         [Parameter(Mandatory=$true)][String]$message,
+         [Parameter(Mandatory=$false)][Boolean]$writeToHostToo = $true
+
     )
 
     # Create an array first for all the parts of the log message
@@ -78,7 +80,12 @@ Function Write-Log {
         Append = $true
         NoClobber = $true
     }
-    Retry-Command -Command 'Out-File' -Args $outArgs -Verbose -retries 10 -MillisecondsDelay $randomDelay
+    Retry-Command -Command 'Out-File' -Args $outArgs -retries 10 -MillisecondsDelay $randomDelay
+
+    # Put the string to host, too
+    If ( $writeToHostToo ) {
+        Write-Host $message
+    }
 
 }
 
