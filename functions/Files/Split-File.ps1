@@ -1,4 +1,8 @@
-﻿Function Split-File {
+﻿<#
+Requires the loaded log function from https://github.com/Apteco/HelperScripts/tree/master/functions/Log
+#>
+
+Function Split-File {
     
     param(
          [Parameter(Mandatory=$true)][string]$inputPath # file to split
@@ -11,8 +15,8 @@
         ,[Parameter(Mandatory=$false)][bool]$header = $true # file has a header?
         ,[Parameter(Mandatory=$false)][bool]$writeHeader = $true # output the header
         ,[Parameter(Mandatory=$false)][string[]]$outputColumns = @() # columns to output
-        ,[Parameter(Mandatory=$false)][string[]]$outputDoubleQuotes = $false # output double quotes 
-        ,[Parameter(Mandatory=$false)][string]$outputPath = ""
+        ,[Parameter(Mandatory=$false)][switch]$outputDoubleQuotes = $false # output double quotes 
+
     )
 
     # TODO [ ] test files without header
@@ -38,14 +42,6 @@
     $reader = New-Object System.IO.StreamReader($input.FullName, [System.Text.Encoding]::GetEncoding($inputEncoding))
 
     # export settings
-    if ( $outputPath -ne "") {
-        $checkPath = Check-Path -Path $outputPath
-        # only use that output path if it exists, otherwise use the current directory
-        if ( $checkPath ) {
-            $currentPath = Get-Location
-            Set-Location -Path $outputPath
-        }
-    }
     $exportId = [guid]::NewGuid()
     $exportFolder = New-Item -Name $exportId -ItemType "directory" # create folder for export
     $exportFilePrefix = "$( $exportFolder.FullName )\$( $input.Name )"
@@ -87,9 +83,10 @@
             #$intLineReadCounter
             $batchCount += 1
 
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tbatchcount $( $batchCount )" >> $logfile
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`trecordCount $( $recordCount )" >> $logfile
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tintLineReadCounter $( $intLineReadCounter )" >> $logfile
+            Write-Log -message "batchcount $( $batchCount )"
+            Write-Log -message "recordCount $( $recordCount )"
+            Write-Log -message "intLineReadCounter $( $intLineReadCounter )"
+
 
             #--------------------------------------------------------------
             # parse lines sequentially
@@ -108,11 +105,11 @@
             # define line blocks (chunks) to be  parsed in parallel
             #--------------------------------------------------------------
 
-            $chunks = @()
+            $chunks = [System.Collections.ArrayList]@()
             $maxChunks = [Math]::Ceiling($intLineReadCounter/$chunkSize)            
             $end = 0
 
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tmaxChunks $( $maxChunks )" >> $logfile
+            Write-Log -message "maxChunks $( $maxChunks )"
 
             for($i = 0; $i -lt $maxChunks ; $i++) {
                 $start = $i * $chunkSize 
@@ -122,17 +119,17 @@
                 }
                 #"$( $start ) - $( $end )"
                 if ( $header ) {
-                    $chunks += ,( @($headerRow) + @($currentLines[$start..$end]) )
+                    $chunks.Add( @($headerRow) + @($currentLines[$start..$end]) )
                 } else {
-                    $chunks += ,@($currentLines[$start..$end])
+                    $chunks.Add( @($currentLines[$start..$end]) )
                 }
                 
             }
 
             # log
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tchunks $( $chunks.Count )" >> $logfile
+            Write-Log -message "chunks $( $chunks.Count )"
             for($i = 0; $i -lt $chunks.Count ; $i++) {
-                "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tchunk $( $i ) size: $( $chunks[$i].Count - [int]$header )" >> $logfile # subtract one line if a header is included
+                Write-Log -message "chunk $( $i ) size: $( $chunks[$i].Count - [int]$header )" # subtract one line if a header is included
             }
             #$chunks[0] | Out-File -FilePath "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") ).csv" -Encoding utf8 # write out some chunks to check
 
@@ -184,11 +181,11 @@
             # create and execute runspaces to parse in parallel
             #--------------------------------------------------------------
 
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tPrepare runspace pool with throttle of $( $throttleLimit ) threads in parallel" >> $logfile
+            Write-Log -message "Prepare runspace pool with throttle of $( $throttleLimit ) threads in parallel"
 
             $RunspacePool = [RunspaceFactory]::CreateRunspacePool(1, $throttleLimit)
             $RunspacePool.Open()
-            $Jobs = @()
+            $Jobs = [System.Collections.ArrayList]@()
 
             # insert header "chunk" at first place
             if ( $header -and $batchCount -eq 1 ) { 
@@ -198,7 +195,7 @@
                 
             }             
             
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tStarting runspace pool" >> $logfile
+            Write-Log -message "Starting runspace pool"
 
             $jobCount = 0
             $chunks | ForEach {
@@ -222,17 +219,17 @@
                 
                 $Job = [powershell]::Create().AddScript($scriptBlock).AddArgument($arguments)
                 $Job.RunspacePool = $RunspacePool
-                $Jobs += New-Object PSObject -Property @{
+                $Jobs.Add([PSCustomObject]@{
                     RunNum = $_
                     Pipe = $Job
                     Result = $Job.BeginInvoke()
-                }
+                })
                 
                 $jobcount += 1
 
             }
 
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tChecking for results of $( $jobcount ) jobs" >> $logfile
+            Write-Log -message "Checking for results of $( $jobcount ) jobs"
 
             # check for results
             Write-Host "Waiting.." -NoNewline
@@ -243,7 +240,7 @@
             Write-Host "All jobs completed!"
             
             # put together results
-            $rows = @()
+            $rows = [System.Collections.ArrayList]@()
             ForEach ($Job in $Jobs) {
                 $res = $Job.Pipe.EndInvoke($Job.Result)
                 
@@ -252,12 +249,12 @@
                     $headerRowParsed = $res.lines
                     #$rows = $rows + $res.lines  
                 } else {
-                    $rows += $res.lines  
+                    $rows.AddRange($res.lines)  
                 }
                               
             }
 
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tGot results back from $( $jobCount )" >> $logfile
+            Write-Log -message "Got results back from $( $jobCount )"
 
 
             #--------------------------------------------------------------
@@ -267,15 +264,15 @@
             
             # open file if it should written in once
             if ( $writeCount -eq -1 ) {
-                "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tOpen file to write: $( $exportFilePrefix )" >> $logfile
+                Write-Log -message "Open file to write: $( $exportFilePrefix )"
                 $writer = New-Object System.IO.StreamWriter($exportFilePrefix, $append, [System.Text.Encoding]::GetEncoding($outputEncoding))
                 if ($writeHeader) {
-                    "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tWriting header" >> $logfile
+                    Write-Log -message "Writing header"
                     $writer.WriteLine($headerRowParsed)
                 }
             }
 
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tWriting $( $rows.count ) lines" >> $logfile
+            Write-Log -message "Writing $( $rows.count ) lines"
 
             # loop for writing lines
             $exportCount = 0          
@@ -284,15 +281,15 @@
                 # close/open streams to write
                 if ( ( $exportCount % $writeCount ) -eq 0 -and $writeCount -gt 0 ) {
                     if ( $null -ne $writer.BaseStream  ) {
-                        "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tClosing file $( $fileCounter ) after exported $( $exportCount )" >> $logfile
+                        Write-Log -message "Closing file $( $fileCounter ) after exported $( $exportCount )"
                         $writer.Close() # close file if stream is open
                         $fileCounter += 1
                     }
                     $f = "$( $exportFilePrefix )$( $fileCounter )"
-                    "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tOpen file to write: $( $f )" >> $logfile
+                    Write-Log -message "Open file to write: $( $f )"
                     $writer = New-Object System.IO.StreamWriter($f, $append, [System.Text.Encoding]::GetEncoding($outputEncoding))
                     if ($writeHeader) {
-                        "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tWriting header" >> $logfile
+                        Write-Log -message "Writing header"
                         $writer.WriteLine($headerRowParsed)
                     }
                 }
@@ -306,7 +303,7 @@
             }
 
             # close last file
-            "$( [datetime]::UtcNow.ToString("yyyyMMddHHmmss") )`tClosing file $( $fileCounter ) after exported $( $exportCount )" >> $logfile
+            Write-Log -message "Closing file $( $fileCounter ) after exported $( $exportCount )"
             $writer.Close()
             $fileCounter += 1
 
@@ -325,11 +322,23 @@
 
     $reader.Close()
 
-    # switch back to current path
-    if ( $outputPath -ne "") {
-        Set-Location -Path $currentPath
-    }
-
     return $exportId.Guid
 
 }
+
+
+
+<#
+
+$params = @{
+    inputPath = "C:\temp\produkt_klima_tag.csv"
+    inputDelimiter = "`t"
+    outputDelimiter = ","
+    chunkSize = 20000
+    outputDoubleQuotes = $true
+    writeCount = 100000
+}
+
+Split-File @params
+
+#>
