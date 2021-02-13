@@ -186,17 +186,6 @@ if ( $paramsExisting ) {
 #
 ################################################
 
-function Get-SignatureKey([String] $key, [String] $dateStamp, [String] $regionName, [String] $serviceName) {
-
-    $secret = "AWS4$( $key )"
-    $kDate = Get-StringHash -inputString $dateStamp -hashName "HMACSHA256" -key $secret
-    $kRegion = Get-StringHash -inputString $regionName -hashName "HMACSHA256" -key $kDate -keyIsHex
-    $kService = Get-StringHash -inputString $serviceName -hashName "HMACSHA256" -key $kRegion -keyIsHex
-    $kSigning = Get-StringHash -inputString "aws4_request" -hashName "HMACSHA256" -key $kService -keyIsHex
-
-    return $kSigning
-
-}
 
 function Invoke-S3 {
 
@@ -253,7 +242,19 @@ function Invoke-S3 {
         # CANONICAL REQUEST
         #-----------------------------------------------
 
-        $canonicalRequestPlain = "$( $verbUpper )`n/$( $escapedObjectKey )`n`ncontent-type:$( $contentType )`nhost:$( $endpoint.Host )`nx-amz-content-sha256:$( $contentHash )`nx-amz-date:$( $date )`n`ncontent-type;host;x-amz-content-sha256;x-amz-date`n$( $contentHash )"
+        #$canonicalRequestPlain = "$( $verbUpper )`n/$( $escapedObjectKey )`n`ncontent-type:$( $contentType )`nhost:$( $endpoint.Host )`nx-amz-content-sha256:$( $contentHash )`nx-amz-date:$( $date )`n`ncontent-type;host;x-amz-content-sha256;x-amz-date`n$( $contentHash )"
+        $canonicalRequestPlain = @"
+$( $verbUpper )
+/$( $escapedObjectKey )
+
+content-type:$( $contentType )
+host:$( $endpoint.Host )
+x-amz-content-sha256:$( $contentHash )
+x-amz-date:$( $date )
+
+content-type;host;x-amz-content-sha256;x-amz-date
+$( $contentHash )
+"@
         $canonicalRequestHash = Get-StringHash -inputString $canonicalRequestPlain -hashName "SHA256"
 
 
@@ -268,7 +269,11 @@ function Invoke-S3 {
         # SIGNATURE KEY
         #-----------------------------------------------
 
-        $sign = Get-SignatureKey -key $settings.secretKey -dateStamp $dateStamp -regionName $settings.region -serviceName $settings.service
+        $secret = "AWS4$( $settings.secretKey )"
+        $kDate = Get-StringHash -inputString $dateStamp -hashName "HMACSHA256" -key $secret
+        $kRegion = Get-StringHash -inputString $settings.region -hashName "HMACSHA256" -key $kDate -keyIsHex
+        $kService = Get-StringHash -inputString $settings.service -hashName "HMACSHA256" -key $kRegion -keyIsHex
+        $sign = Get-StringHash -inputString "aws4_request" -hashName "HMACSHA256" -key $kService -keyIsHex
 
 
         #-----------------------------------------------
