@@ -386,13 +386,13 @@ $( $contentHash )
         #-----------------------------------------------
 
         # Remove file if already exists
-        if ( $localfile -ne "" ) {
+        if ( $localfile -ne "" -and $verbUpper -ne "PUT") {
             if ( $overwriteLocalfile ) {
                 Remove-Item -Path $finalFilepath -Force
             }    
             Move-Item -Path $localFilepath -Destination $finalFilepath
         }
-        
+
     }
     
     end {
@@ -459,7 +459,7 @@ $params = $defaultParams + @{
 $bucket = Invoke-S3 @params
 $chooseFiles = $bucket.ListBucketResult.contents | Out-GridView -PassThru
 
-
+exit 0
 
 #-----------------------------------------------
 # DOWNLOAD FILES TO LOCAL
@@ -516,7 +516,7 @@ exit 0
 #-----------------------------------------------
 
 
-$fileToUpload = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\test.txt"
+$fileToUpload = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\ttt.jpg"
 Set-Location -Path $scriptPath # Needed for the relativ part in the next step
 $objectkey = ( Resolve-Path -Path $fileToUpload -Relative ) -replace "\.\\","" -replace "\\","/"
 
