@@ -201,6 +201,10 @@ function Invoke-S3 {
         ,[Parameter(Mandatory=$false)][Switch]$storeEncrypted = $false                              # TODO [ ] implement this flag
         ,[Parameter(Mandatory=$false)][Switch]$keepFolderStructure = $true                          # keep the folder when downloading files
         ,[Parameter(Mandatory=$false)][Switch]$overwriteLocalfile = $false                          # should the local file overridden if already existing?
+        ,[Parameter(Mandatory=$false)][String]$region = "s3-de-central"                             # 
+        ,[Parameter(Mandatory=$false)][String]$service = "s3"                                       # 
+        ,[Parameter(Mandatory=$false)][pscredential]$cred = $false                                        # securestring containing accesskey as user and secret as password
+
     )
 
     begin {
@@ -215,7 +219,7 @@ function Invoke-S3 {
         $dateStamp = $currentDate.ToUniversalTime().ToString("yyyyMMdd")
 
         # setup scope
-        $scope = "$( $dateStamp )/$( $settings.region )/$( $settings.service )/aws4_request"
+        $scope = "$( $dateStamp )/$( $region )/$( $service )/aws4_request"
 
         # Sanitize strings
         $verbUpper = $verb.ToUpper()
@@ -227,10 +231,14 @@ function Invoke-S3 {
         # file hash for upload, otherwise hash of empty string
         if ( $verbUpper -eq "PUT" -and $localfile -ne "") {           
             # work out hash value
-            $contentHash = (( Get-FileHash $f.FullName -Algorithm "SHA256" ).Hash ).ToLower()
+            $contentHash = (( Get-FileHash $localfile -Algorithm "SHA256" ).Hash ).ToLower()
         } else {
             $contentHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         }
+
+        # credentials
+        $secret = $cred.GetNetworkCredential().Password
+        $accesskey = $cred.UserName
 
         
 
@@ -269,10 +277,10 @@ $( $contentHash )
         # SIGNATURE KEY
         #-----------------------------------------------
 
-        $secret = "AWS4$( $settings.secretKey )"
+        $secret = "AWS4$( $secret )"
         $kDate = Get-StringHash -inputString $dateStamp -hashName "HMACSHA256" -key $secret
-        $kRegion = Get-StringHash -inputString $settings.region -hashName "HMACSHA256" -key $kDate -keyIsHex
-        $kService = Get-StringHash -inputString $settings.service -hashName "HMACSHA256" -key $kRegion -keyIsHex
+        $kRegion = Get-StringHash -inputString $region -hashName "HMACSHA256" -key $kDate -keyIsHex
+        $kService = Get-StringHash -inputString $service -hashName "HMACSHA256" -key $kRegion -keyIsHex
         $sign = Get-StringHash -inputString "aws4_request" -hashName "HMACSHA256" -key $kService -keyIsHex
 
 
@@ -293,7 +301,7 @@ $( $contentHash )
             "Content-Type" = $contentType
             "x-amz-content-sha256" = $contentHash
             "x-amz-date" = $date
-            "Authorization" = "AWS4-HMAC-SHA256 Credential=$($settings.accessKey)/$($scope),SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date,Signature=$( $signatureHash )"
+            "Authorization" = "AWS4-HMAC-SHA256 Credential=$($accesskey)/$($scope),SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date,Signature=$( $signatureHash )"
         }
 
 
@@ -302,40 +310,47 @@ $( $contentHash )
         #-----------------------------------------------
 
 
-        if ( $localfile -ne "" ) {
+        if ( $localfile -ne "") {
 
             $path = "."  # TODO [ ] maybe change to another root folder
 
             # Create folder structure if wished
-            if ( $keepFolderStructure ) {
+            if ( $verbUpper -eq "PUT") {
+                
+                $localFilepath = Resolve-Path -Path $localfile
 
-                $pathParts = $objectKey -split "/" 
-                $pathParts | select -SkipLast 1 | ForEach {
-                    $part = $_
-                    $path = Join-Path $path -ChildPath $part #-Resolve
-                }
-                #$resolvedPath = Resolve-Path -Path $path -
-                if ( $pathparts.count -gt 1 -and !(Test-Path -Path $path) ) {
-                    New-Item -Path $path -ItemType Directory
-                }
-                $localFilepath = Join-Path -Path $path -ChildPath $pathParts[-1] 
-    
             } else {
-    
-                $pathParts = $objectKey -split "/" 
-                $pathToResolve = Join-Path -Path $path -ChildPath $pathParts[-1] 
-                $localFilepath = Resolve-Path -Path $pathToResolve
-    
-            }
 
-            # Remove file if already exists
-            if ( $overwriteLocalfile ) {
-                Remove-Item -Path $localFilepath -Force
+                $tempFilename = "$( $localfile ).tmp"
+
+                if ( $keepFolderStructure ) {
+
+                    $pathParts = $objectKey -split "/" 
+                    $pathParts | select -SkipLast 1 | ForEach {
+                        $part = $_
+                        $path = Join-Path $path -ChildPath $part #-Resolve
+                    }
+                    #$resolvedPath = Resolve-Path -Path $path -
+                    if ( $pathparts.count -gt 1 -and !(Test-Path -Path $path) ) {
+                        New-Item -Path $path -ItemType Directory
+                    }
+                    $localFilepath = Join-Path -Path $path -ChildPath $tempFilename #$pathParts[-1] 
+                    $finalFilepath = Join-Path -Path $path -ChildPath $localfile 
+        
+                } else {
+        
+                    $pathParts = $objectKey -split "/" 
+                    $pathToResolve = Join-Path -Path $path -ChildPath $tempFilename #$pathParts[-1] 
+                    $localFilepath = Resolve-Path -Path $pathToResolve
+                    $finalPath = Join-Path -Path $path -ChildPath $localfile
+                    $finalFilepath =  Resolve-Path -Path $finalPath
+                    
+                }
+    
             }
 
 
         }
-        
 
         #-----------------------------------------------
         # CALL API
@@ -365,8 +380,19 @@ $( $contentHash )
 
 
         $result = Invoke-RestMethod @callParams
-        
 
+        #-----------------------------------------------
+        # FILES WRAP UP
+        #-----------------------------------------------
+
+        # Remove file if already exists
+        if ( $localfile -ne "" ) {
+            if ( $overwriteLocalfile ) {
+                Remove-Item -Path $finalFilepath -Force
+            }    
+            Move-Item -Path $localFilepath -Destination $finalFilepath
+        }
+        
     }
     
     end {
@@ -395,12 +421,29 @@ $( $contentHash )
 $AllProtocols = [System.Net.SecurityProtocolType]'Tls11,Tls12'
 [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
 
+#-----------------------------------------------
+# PREPARATION
+#-----------------------------------------------
+
+$stringSecure = ConvertTo-SecureString -String $settings.secretKey -AsPlainText -Force
+$cred = [pscredential]::new( $settings.accessKey, $stringSecure )
+
+$defaultParams = @{
+    "region" = "s3-de-central"
+    "service" = "s3"
+    "cred" = $cred
+}
+
+
 
 #-----------------------------------------------
 # LISTS BUCKETS
 #-----------------------------------------------
 
-$buckets = Invoke-S3 -uri $settings.baseUrl
+$params = $defaultParams + @{
+}
+
+$buckets = Invoke-S3 @params
 $chooseBucket = $buckets.ListAllMyBucketsResult.Buckets.Bucket | Out-GridView -PassThru | select -First 1
 
 
@@ -408,24 +451,40 @@ $chooseBucket = $buckets.ListAllMyBucketsResult.Buckets.Bucket | Out-GridView -P
 # LIST FILES OF BUCKETS
 #-----------------------------------------------
 
-$bucket = Invoke-S3 -uri $settings.baseUrl -bucket $chooseBucket.name
+$params = $defaultParams + @{
+    "Uri" = $settings.baseUrl
+    "Bucket" = $chooseBucket.name
+}
+
+$bucket = Invoke-S3 @params
 $chooseFiles = $bucket.ListBucketResult.contents | Out-GridView -PassThru
 
-exit 0
+
 
 #-----------------------------------------------
 # DOWNLOAD FILES TO LOCAL
 #-----------------------------------------------
 
+# TODO [ ] Check hash values to make sure the file is not corrupted
+
 $chooseFiles | ForEach {
 
     $f = $_
-    $f.Key
     $filename = ( $f.Key -split "/" )[-1]
-    $contentType = [System.Web.MimeMapping]::GetMimeMapping($filename)
-    $destination = ".\$( $filename )"
+    #$tempFilename = "$( $filename ).tmp"
 
-    Invoke-S3 -uri $settings.baseUrl -bucket $chooseBucket.name -objectKey $f.Key -localfile $destination -contentType $contentType -keepFolderStructure
+    $params = $defaultParams + @{
+        "Uri" = $settings.baseUrl
+        "Bucket" = $chooseBucket.name
+        "objectKey" = $f.Key
+        "localfile" = ".\$( $filename )"
+        "contentType" = [System.Web.MimeMapping]::GetMimeMapping($filename)
+        "keepFolderStructure" = $true
+    }
+    
+    Invoke-S3 @params
+
+    
 
 }
 
@@ -438,7 +497,15 @@ exit 0
 $chooseFiles | ForEach {
 
     $f = $_   
-    Invoke-S3 -uri $settings.baseUrl -bucket $chooseBucket.name -objectKey $f.Key -verb "DELETE"
+
+    $params = $defaultParams + @{
+        "Uri" = $settings.baseUrl
+        "Bucket" = $chooseBucket.name
+        "objectKey" = $f.Key
+        "verb" = "DELETE"
+    }
+
+    Invoke-S3 @params
 
 }
 
@@ -449,11 +516,19 @@ exit 0
 #-----------------------------------------------
 
 
-$fileToUpload = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\_archive\sergey-sokolov-yxJavcfExYs-unsplash.jpg"
+$fileToUpload = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\test.txt"
 Set-Location -Path $scriptPath # Needed for the relativ part in the next step
 $objectkey = ( Resolve-Path -Path $fileToUpload -Relative ) -replace "\.\\","" -replace "\\","/"
 
-Invoke-S3 -uri $settings.baseUrl -bucket $chooseBucket.name -objectKey $objectkey -localfile $fileToUpload -verb "PUT"
+$params = $defaultParams + @{
+    "Uri" = $settings.baseUrl
+    "Bucket" = $chooseBucket.name
+    "objectKey" = $objectkey
+    "localfile" = $fileToUpload
+    "verb" = "PUT"
+}
+
+Invoke-S3 @params
 
 
 
