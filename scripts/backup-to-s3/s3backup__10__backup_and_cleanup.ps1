@@ -4,9 +4,9 @@
 #
 ################################################
 
-#Param(
-#    [hashtable] $params
-#)
+Param(
+    [hashtable] $params
+)
 
 #-----------------------------------------------
 # DEBUG SWITCH
@@ -14,7 +14,14 @@
 
 $debug = $true
 
+#-----------------------------------------------
+# INPUT PARAMETERS, IF DEBUG IS TRUE
+#-----------------------------------------------
 
+if ( $debug ) {
+    $params = [hashtable]@{
+    }
+}
 
 ################################################
 #
@@ -61,21 +68,6 @@ Set-Location -Path $scriptPath
 
 ################################################
 #
-# SCRIPT ROOT
-#
-################################################
-
-# Load scriptpath
-if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
-    $scriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-} else {
-    $scriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
-}
-Set-Location -Path $scriptPath
-
-
-################################################
-#
 # SETTINGS
 #
 ################################################
@@ -86,25 +78,17 @@ $libSubfolder = "lib"
 $settingsFilename = "settings.json"
 #$lastSessionFilename = "lastsession.json"
 $processId = [guid]::NewGuid()
-$modulename = "S3"
+$modulename = "S3BACKUP"
 $timestamp = [datetime]::Now
 
 
-# [ ] implement settings file and encrypted keys
-$settings = @{
-   
-    accessKey = "accesskey" # ENTER YOUR ACCESS KEY
-    secretKey = "secretkey" # ENTER YOUR SECRET KEY
-    region = "s3-de-central"
-    service = "s3"
-    baseUrl = "https://s3-de-central.profitbricks.com/"
-    
-    changeTLS = $true
-    logfile = "$( $scriptPath )\s3.log"
-
-
+if ( $params.settingsFile -ne $null ) {
+    # Load settings file from parameters
+    $settings = Get-Content -Path "$( $params.settingsFile )" -Encoding UTF8 -Raw | ConvertFrom-Json
+} else {
+    # Load default settings
+    $settings = Get-Content -Path "$( $scriptPath )\$( $settingsFilename )" -Encoding UTF8 -Raw | ConvertFrom-Json
 }
-
 
 # Allow only newer security protocols
 # hints: https://www.frankysweb.de/powershell-es-konnte-kein-geschuetzter-ssltls-kanal-erstellt-werden/
@@ -121,7 +105,6 @@ $logfile = $settings.logfile
 # append a suffix, if in debug mode
 if ( $debug ) {
     $logfile = "$( $logfile ).debug"
-    $settings.sqliteDb = "$( $settings.sqliteDb ).debug"
 }
 
 
@@ -140,13 +123,13 @@ Get-ChildItem -Path ".\$( $functionsSubfolder )" -Recurse -Include @("*.ps1") | 
     "... $( $_.FullName )"
 }
 
-<#
+
 # Load all exe and dll files in subfolder
 $libExecutables = Get-ChildItem -Path ".\$( $libSubfolder )" -Recurse -Include @("*.exe","*.dll") 
 $libExecutables | ForEach {
     "... $( $_.FullName )"
 }
-#>
+
 
 # Import Bits to download all files in once
 #Import-Module BitsTransfer
@@ -425,8 +408,33 @@ $AllProtocols = [System.Net.SecurityProtocolType]'Tls11,Tls12'
 # PREPARATION
 #-----------------------------------------------
 
-$stringSecure = ConvertTo-SecureString -String $settings.secretKey -AsPlainText -Force
-$cred = [pscredential]::new( $settings.accessKey, $stringSecure )
+$stringSecure = ConvertTo-SecureString -String ( Get-SecureToPlaintext $settings.s3.secretKey ) -AsPlainText -Force
+$cred = [pscredential]::new( $settings.s3.accessKey, $stringSecure )
+
+
+#-----------------------------------------------
+# TEST WITH CLASSES INSTEAD FUNCTIONAL CALLS
+#-----------------------------------------------
+
+
+$s3 = [S3]::new( $cred, $settings.s3.baseUrl, $settings.s3.region, $settings.s3.service )
+$buckets = $s3.getBuckets()
+
+# Show buckets of s3 account
+$buckets
+
+# Show objects in a bucket
+$buckets[0].getObjects()
+
+
+
+exit 0
+
+
+#-----------------------------------------------
+# PREP FOR API CALLS
+#-----------------------------------------------
+
 
 $defaultParams = @{
     "region" = "s3-de-central"
@@ -446,13 +454,14 @@ $params = $defaultParams + @{
 $buckets = Invoke-S3 @params
 $chooseBucket = $buckets.ListAllMyBucketsResult.Buckets.Bucket | Out-GridView -PassThru | select -First 1
 
+#exit 0
 
 #-----------------------------------------------
 # LIST FILES OF BUCKETS
 #-----------------------------------------------
 
 $params = $defaultParams + @{
-    "Uri" = $settings.baseUrl
+    "Uri" = $settings.s3.baseUrl
     "Bucket" = $chooseBucket.name
 }
 
@@ -474,7 +483,7 @@ $chooseFiles | ForEach {
     #$tempFilename = "$( $filename ).tmp"
 
     $params = $defaultParams + @{
-        "Uri" = $settings.baseUrl
+        "Uri" = $settings.s3.baseUrl
         "Bucket" = $chooseBucket.name
         "objectKey" = $f.Key
         "localfile" = ".\$( $filename )"
@@ -516,12 +525,12 @@ exit 0
 #-----------------------------------------------
 
 
-$fileToUpload = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\ttt.jpg"
+$fileToUpload = "C:\Users\Florian\Downloads\nathan-dumlao-zUNs99PGDg0-unsplash.jpg"
 Set-Location -Path $scriptPath # Needed for the relativ part in the next step
 $objectkey = ( Resolve-Path -Path $fileToUpload -Relative ) -replace "\.\\","" -replace "\\","/"
 
 $params = $defaultParams + @{
-    "Uri" = $settings.baseUrl
+    "Uri" = $settings.s3.baseUrl
     "Bucket" = $chooseBucket.name
     "objectKey" = $objectkey
     "localfile" = $fileToUpload

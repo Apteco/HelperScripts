@@ -1,4 +1,15 @@
 
+# Setup
+
+* Execute `s3backup__00__create_settings.ps1` to create the basic settings
+* Execute `s3backup__01__setup_backup_folders.ps1` to add the folders to backup
+
+# Setup in Profitbricks/IONOS
+
+* Create a user in Profitbricks
+* Create a group (if not exists) that has only access to object storage
+* Copy the canonical user id from the group
+* Grant access to a bucket with that canonical user id
 
 
 # Licenses and References
