@@ -2,7 +2,6 @@
 *.log
 *.zip
 *.html
-*.txt
 *.debug
 *.sqlite
 *.key
