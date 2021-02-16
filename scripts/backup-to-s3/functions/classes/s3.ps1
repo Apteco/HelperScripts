@@ -11,11 +11,11 @@ implemented
 [x]                            |- Object
 [x]                                |- delete()
 [x]                                |- download()
-[ ]                                |- info()
+[?]                                |- info()
 [x]                        |- upload()
 [ ]                        |- delete()
 [ ]                        |- versioning
-[ ]                        |- versions
+[x]                        |- versions
 [ ]                |- addBucket()
 
 ... and more if needed
@@ -206,6 +206,7 @@ class S3Bucket {
     [PSCustomObject] getObjects () {
 
         # TODO [ ] check empty bucket -> NullReferenceException
+        # TODO [ ] implement paging for more than 1k objects
 
         # Call parameters
         $params = $this.s3.defaultParams + @{
@@ -234,6 +235,28 @@ class S3Bucket {
         return $s3objects
         
     }
+
+    [PSCustomObject] getObjectsVersions () {
+
+        # Call parameters
+        $params = $this.s3.defaultParams + @{
+            "Bucket" = $this.name
+        }
+
+        # Append versions
+        $params.uri = "$( $params.uri )/?versions"
+
+        # API Call
+        $objectsResult = Invoke-S3 @params
+
+        # TODO [ ] map this to objects
+        # Return the results
+        return Convert-XMLtoPSObject -XML $objectsResult.ListBucketResult.contents
+        #return $s3objects
+        
+    }
+
+
 
     [System.Collections.ArrayList] upload( [String]$itemToUpload ) {
         
@@ -373,7 +396,20 @@ class S3Object {
         return ( Get-Item -Path "$( $path  )" )
         
     }
+<#
+    getInfo() {
 
+        $params = $this.bucket.s3.defaultParams + @{
+            "Bucket" = $this.bucket.name
+            "objectKey" = $this.key
+            "verb" = "HEAD"
+        }
+    
+        $res = Invoke-S3 @params
+
+
+    }
+#>
     [void] remove() {
 
         $params = $this.bucket.s3.defaultParams + @{
