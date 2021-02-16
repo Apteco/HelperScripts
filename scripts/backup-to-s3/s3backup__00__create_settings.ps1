@@ -125,7 +125,6 @@ if(Test-Path -LiteralPath $upload -IsValid ) {
 $keyFile = "$( $scriptPath )\aes.key"
 
 
-
 #-----------------------------------------------
 # S3 SETTINGS
 #-----------------------------------------------
