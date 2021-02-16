@@ -38,7 +38,7 @@ Function Get-StringHash()
         if ( $keyIsHex ) {
             $alg.key = Convert-HexToByteArray -HexString $key
         } else {
-            $alg.key = [Text.Encoding]::UTF8.GetBytes($key)
+            $alg.key = [System.Text.Encoding]::UTF8.GetBytes($key)
         }
     }
 

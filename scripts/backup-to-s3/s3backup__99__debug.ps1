@@ -78,7 +78,7 @@ $libSubfolder = "lib"
 $settingsFilename = "settings.json"
 #$lastSessionFilename = "lastsession.json"
 $processId = [guid]::NewGuid()
-$modulename = "S3BACKUP"
+$modulename = "S3DEBUG"
 $timestamp = [datetime]::Now
 
 
@@ -165,44 +165,7 @@ if ( $paramsExisting ) {
 
 ################################################
 #
-# PREPARE 7Z ARCHIVES
-#
-################################################
-
-
-$7z = $libExecutables | where { $_.Name -eq "7za.exe"  }
-$archive = Join-Path -Path $settings.uploadFolder -ChildPath "$( $timestamp.ToString("yyyyMMddHHmmss") ).7z"
-
-# For more information see https://thedeveloperblog.com/7-zip-examples
-$arguments = @(
-    "a"                                                                         # add to archive
-    "-p$( Get-SecureToPlaintext $settings.'7z'.encryptionPassword )"        # use encryption password
-    "-spf"                                                                      # use fully qualified file paths
-    "-mx3"                                                                      # Compression level (1 fastest -> 9 slowest)
-    #"-bt"                                                                       # show execution time statistics
-    "-r"                                                                        # Recurse subdirectories
-    "-mhe"                                                                      # Encrypt headers, so the filenames won't be readable without the password
-    """$( $archive )"""                                                        # the 7z ending automatically uses AES256 for encryption
-)
-
-# Put folders and files into archive
-$settings.objectsToBackup | ForEach {
-
-    $path = $_
-
-    Write-Log -message "Adding '$( $path )' to the archive '$( $archive )'"
-
-
-    $arg = $arguments + @( """$( $path )""" )
-    Start-Process -NoNewWindow -FilePath $7z.FullName -ArgumentList $arg -Wait
-
-}
-
-
-
-################################################
-#
-# UPLOAD TO S3
+# TEST S3
 #
 ################################################
 
@@ -213,60 +176,65 @@ $settings.objectsToBackup | ForEach {
 
 $stringSecure = ConvertTo-SecureString -String ( Get-SecureToPlaintext $settings.s3.secretKey ) -AsPlainText -Force
 $cred = [pscredential]::new( $settings.s3.accessKey, $stringSecure )
+
+
+#-----------------------------------------------
+# TEST WITH CLASSES INSTEAD FUNCTIONAL CALLS
+#-----------------------------------------------
+
 $s3 = [S3]::new( $cred, $settings.s3.baseUrl, $settings.s3.region, $settings.s3.service )
+$buckets = $s3.getBuckets()
 
 
 #-----------------------------------------------
-# CHOOSE BUCKET
+# BUCKETS OF S3 ACCOUNT
 #-----------------------------------------------
 
-$bucket = $s3.getBuckets() | where { $_.name -eq $settings.s3.bucket } | select -first 1
-
-
-#-----------------------------------------------
-# UPLOAD THE ARCHIVE
-#-----------------------------------------------
-
-$bucket.upload( $archive )
-
-
-Write-Log -message "Uploaded '$( $archive )' to the bucket '$( $bucket.name )'"
-
-
-################################################
-#
-# CLEANUP AT S3
-#
-################################################
+$bucket = $buckets | Out-GridView -PassThru
 
 
 #-----------------------------------------------
-# DEFINE THE TIMEFRAME TO REMOVE
+# OBJECTS IN A BUCKET
 #-----------------------------------------------
 
-$removeEarlierThan = [Datetime]::Today.AddDays( $settings.maxAgeOfArchives * -1 )
+$objectsToDownload = $bucket.getObjects() | Out-GridView -PassThru
+
+exit 0
+
+
+#-----------------------------------------------
+# DOWNLOAD MULTIPLE ITEMS
+#-----------------------------------------------
+
+$downloads = [System.Collections.ArrayList]@()
+$objectsToDownload | ForEach {
+    $dl = $_
+    $downloads.add( $dl.download( "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3" ) )
+}
+
+
+exit 0
+
+
+#-----------------------------------------------
+# UPLOAD AN ITEM
+#-----------------------------------------------
+
+$bucket.upload( "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\_archive\sergey-sokolov-yxJavcfExYs-unsplash.jpg" )
+
+
+#-----------------------------------------------
+# UPLOAD A FOLDER
+#-----------------------------------------------
+
+$bucket.upload( "C:\Users\Florian\Pictures\Saved Pictures\TTT" )
 
 
 #-----------------------------------------------
 # REMOVE ITEMS
 #-----------------------------------------------
 
-$bucket.getObjects() | where { $_.lastModified -lt $removeEarlierThan } | ForEach {
-    $s3object = $_
-    $s3object.remove()
-    Write-Log -message "Removed the object '$( $s3object.key )' in bucket '$( $bucket.name )'"
+$objectsToDownload | ForEach {
+    $_.remove()
 }
 
-
-################################################
-#
-# CLEANUP LOCALLY
-#
-################################################
-
-
-Get-ChildItem -Path $settings.uploadFolder -File | where { $_.LastWriteTime -lt $removeEarlierThan } | ForEach {
-    $f = Get-Item -Path $_
-    Write-Log -message "Removed the archive '$( $f.FullName )'"
-    Remove-Item -Path $f.FullName
-}

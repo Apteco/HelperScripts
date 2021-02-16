@@ -103,8 +103,6 @@ if ( $settings.PSObject.Properties.Name -contains $propName ) {
 }
 
 
-
-
 ################################################
 #
 # PACK TOGETHER SETTINGS AND SAVE AS JSON
@@ -116,3 +114,4 @@ $json = $settings | ConvertTo-Json -Depth 8 # -compress
 
 # save settings to file
 $json | Set-Content -path "$( $settingsFile )" -Encoding UTF8
+$json | Set-Content -path "$( $settingsFilename )" -Encoding UTF8

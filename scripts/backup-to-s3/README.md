@@ -22,3 +22,10 @@ This script uses the 7zip command line to zip and encrypt files before it gets u
 
 Read the files ./lib/7z1900-extra/License.txt or http://www.7-zip.org/ for more information about license and source code.
 
+
+
+# Troubleshooting
+
+## Certificate problems
+
+* If you see an error like this one<br/><br/>![grafik](https://user-images.githubusercontent.com/14135678/108084666-c5ae8c00-7074-11eb-8deb-5e1225911347.png)<br/><br/> then have a look if you have used dots in your bucket name. Because the bucketname ist used as a subdomain there are no bucketnames with dots covered by the ssl certificate

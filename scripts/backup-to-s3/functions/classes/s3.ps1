@@ -27,6 +27,65 @@ DEPENDENCIES
 Get-StringHash.ps1 -> https://github.com/Apteco/HelperScripts/blob/master/functions/String/Get-StringHash.ps1
 
 
+
+EXAMPLES
+
+
+#-----------------------------------------------
+# PREPARATION
+#-----------------------------------------------
+
+$stringSecure = ConvertTo-SecureString -String $secret -AsPlainText -Force
+$cred = [pscredential]::new( $accessKey, $stringSecure )
+
+
+#-----------------------------------------------
+# TEST WITH CLASSES INSTEAD FUNCTIONAL CALLS
+#-----------------------------------------------
+
+$s3 = [S3]::new( $cred, $settings.s3.baseUrl, $settings.s3.region, $settings.s3.service )
+$buckets = $s3.getBuckets()
+
+
+#-----------------------------------------------
+# BUCKETS OF S3 ACCOUNT
+#-----------------------------------------------
+
+$bucket = $buckets | Out-GridView -PassThru
+
+
+#-----------------------------------------------
+# OBJECTS IN A BUCKET
+#-----------------------------------------------
+
+$objectsToDownload = $bucket.getObjects() | Out-GridView -PassThru
+
+
+#-----------------------------------------------
+# DOWNLOAD MULTIPLE ITEMS
+#-----------------------------------------------
+
+$downloads = [System.Collections.ArrayList]@()
+$objectsToDownload | ForEach {
+    $dl = $_
+    $downloads.add( $dl.download( "C:\Users\Florian\Pictures\Saved Pictures\TTT\TestScreens\Holla" ) )
+}
+
+
+#-----------------------------------------------
+# UPLOAD AN ITEM
+#-----------------------------------------------
+
+$bucket.upload( "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\backup-to-s3\_archive\sergey-sokolov-yxJavcfExYs-unsplash.jpg" )
+
+
+#-----------------------------------------------
+# UPLOAD A FOLDER
+#-----------------------------------------------
+
+$bucket.upload( "C:\Users\Florian\Pictures\Saved Pictures\TTT" )
+
+
 #>
 
 
@@ -343,7 +402,7 @@ class S3Object {
 #>
 
     [String]$key
-    [datetime]$LastModified
+    [datetime]$lastModified
     [String]$storageClass
     [int]$size
     [String]$eTag

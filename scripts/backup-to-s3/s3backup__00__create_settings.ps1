@@ -22,6 +22,9 @@ Set-Location -Path $scriptPath
 # LOAD MORE FUNCTIONS
 #-----------------------------------------------
 
+# Assemblies
+Add-Type -AssemblyName System.Web
+
 $functionsSubfolder = ".\functions"
 
 "Loading..."
@@ -140,6 +143,7 @@ $s3Settings = @{
     secretKey = $s3SecretKeyEncrypted # ENTER YOUR SECRET KEY
     region = "s3-de-central"
     service = "s3"
+    bucket = ""
 
 }
 
@@ -185,6 +189,33 @@ $settings = [PSCustomObject]@{
 
 ################################################
 #
+# SOME MORE SETTINGS WITH THE API
+#
+################################################
+
+
+#-----------------------------------------------
+# PREPARATION
+#-----------------------------------------------
+
+$stringSecure = ConvertTo-SecureString -String ( Get-SecureToPlaintext $settings.s3.secretKey ) -AsPlainText -Force
+$cred = [pscredential]::new( $settings.s3.accessKey, $stringSecure )
+$s3 = [S3]::new( $cred, $settings.s3.baseUrl, $settings.s3.region, $settings.s3.service )
+
+
+#-----------------------------------------------
+# CHOOSE THE BUCKET FOR BACKUP
+#-----------------------------------------------
+
+# TODO [ ] alternatively a bucket creation could also be implemented
+
+$buckets = $s3.getBuckets()
+$bucket = $buckets | Out-GridView -PassThru | select -First 1
+$settings.s3.bucket = $bucket.name
+
+
+################################################
+#
 # PACK TOGETHER SETTINGS AND SAVE AS JSON
 #
 ################################################
@@ -196,17 +227,18 @@ $json = $settings | ConvertTo-Json -Depth 8 # -compress
 $json | Set-Content -path "$( $settingsFile )" -Encoding UTF8
 
 
-exit 0
-
 ################################################
 #
-# SOME MORE SETTINGS WITH THE API
+# CREATE FOLDER STRUCTURE
 #
 ################################################
 
 #-----------------------------------------------
-# CHOOSE THE BUCKET FOR BACKUP
+# CHECK UPLOADS FOLDER
 #-----------------------------------------------
 
-# TODO [ ] alternatively a bucket creation could also be implemented
-
+$uploadsFolder = $settings.uploadFolder
+if ( !(Test-Path -Path $uploadsFolder) ) {
+    Write-Log -message "Upload $( $uploadsFolder ) does not exist. Creating the folder now!"
+    New-Item -Path "$( $uploadsFolder )" -ItemType Directory
+}
