@@ -227,10 +227,12 @@ $bucket = $s3.getBuckets() | where { $_.name -eq $settings.s3.bucket } | select 
 # UPLOAD THE ARCHIVE
 #-----------------------------------------------
 
-$bucket.upload( $archive )
-
+$t = Measure-Command {
+    $bucket.upload( $archive )
+}
 
 Write-Log -message "Uploaded '$( $archive )' to the bucket '$( $bucket.name )'"
+Write-Log -message "The upload needed $( $t.TotalMinutes.toString("#.##") ) minutes in total"
 
 
 ################################################
