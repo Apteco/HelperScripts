@@ -8,7 +8,7 @@ $logfile = "C:\logfile.txt"
 $processId = [guid]::NewGuid()
 * The process id is good for parallel calls so you know they belong together
 
-Current Version = 202002052330
+Current Version = 202102171337
 
 #>
 
@@ -51,18 +51,55 @@ Function Retry-Command
 }
 
 
+# Severity Enumeration used by the log function
+Enum LogSeverity {
+    INFO      = 0
+    WARNING   = 10
+    ERROR     = 20
+}
+
+
+<#
+
+Use the function like:
+
+Write-Log -message "Hello World"
+Write-Log -message "Hello World" -severity ([LogSeverity]::ERROR)
+
+And the logfile will look like
+
+20210217134552	a6f3eda5-1b50-4841-861e-010174784e8c	INFO	Hello World
+20210217134617	a6f3eda5-1b50-4841-861e-010174784e8c	ERROR	Hello World
+
+
+Make sure, the variable $logfile is present before calling this
+
+To use this, do something like:
+
+$logfile = ".\test.log"
+
+If there is a variable $processId present, it will be logged, too. It can be generated with
+$processId = [guid]::NewGuid()
+
+#>
 Function Write-Log {
 
-    param(
-         [Parameter(Mandatory=$true)][String]$message,
-         [Parameter(Mandatory=$false)][Boolean]$writeToHostToo = $true
+    [cmdletbinding()]
 
+    param(
+          [Parameter(Mandatory=$true)][String]$message
+         ,[Parameter(Mandatory=$false)][Boolean]$writeToHostToo = $true
+         ,[Parameter(Mandatory=$false)][LogSeverity]$severity = [LogSeverity]::INFO
     )
+
+    # If the variable is not present, it will create an exception
+    Get-Variable -Name "logfile" -Scope "Script"
 
     # Create an array first for all the parts of the log message
     $logarray = @(
         [datetime]::Now.ToString("yyyyMMddHHmmss")
-        $processId
+        $Script:processId
+        $severity.ToString()
         $message
     )
 
@@ -74,7 +111,7 @@ Function Write-Log {
     #Out-File -InputObject = $logstring
     $randomDelay = Get-Random -Maximum 3000
     $outArgs = @{
-        FilePath = $logfile
+        FilePath = $script:logfile
         InputObject = $logstring
         Encoding = "utf8"
         Append = $true
@@ -88,4 +125,5 @@ Function Write-Log {
     }
 
 }
+
 
