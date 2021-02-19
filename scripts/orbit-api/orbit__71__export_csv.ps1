@@ -73,10 +73,14 @@ $params = @{
     dataViewName=$dataview
     systemName=$system
     directoryPath=$chooseRoot.path
-    offset=10
-    count=30
 }
-$files = Invoke-Apteco -key "GetFiles" -additional $params
+
+$query = @{
+  offset=0
+  count=50
+}
+
+$files = Invoke-Apteco -key "GetFiles" -additional $params -query $query
 
 # List the result
 $files.list | ft
@@ -84,6 +88,7 @@ $files.list | ft
 # Choose a file
 $chooseFile = $files.list | where { $_.type -in @("Selection") } | Out-GridView -PassThru
 #$chooseFile = $files.list | where { $_.name -eq "ActiveCustomers.xml" }
+
 
 
 #-----------------------------------------------
@@ -100,33 +105,17 @@ $chosenFileQuery = Invoke-Apteco -key "GetQueryFromFileSync" -additional @{dataV
 $chosenFileQuery.query | ConvertTo-Json -depth 20
 
 
-
 ################################################
 #
-# EXPORT A SELECTION AS URN FILE
+# GET RESULT BACK WITHOUT EXPORT
 #
 ################################################
 
-$filename = "$( [datetime]::Now.ToString("yyyyMMddHHmmss") ).csv"
-
-$exportBody = @{
+$browseBody = @{
   "baseQuery"= $chosenFileQuery.query
   "resolveTableName"="Customers"
   "maximumNumberOfRowsToBrowse" = 10
   "returnBrowseRows" = $true
-  "pathToExportTo" = "Private/$( $filename )"
-  #"urnFilePath" = "Private/$( $filename ).urn"
-  #"urnPathToExportTo" = "Private/$( $filename ).urn"
-  "output" = @{
-    "format" = "CSV" # CSV|URN|XLSX
-    "delimiter" = ";"
-    "alphaEncloser" = """"
-    "numericEncloser" = ""
-    "authorisationCode" = ""
-    "exportExtraName" = ""
-    #"outputUrnWithExport" = $true
-    #"urnPath"="Private/$( $filename ).urn"
-  }
   "columns" = @(
     @{
       "id" = "0"
@@ -159,15 +148,50 @@ $exportBody = @{
       "denominator" = 0
     }
   }
-  #"generateUrnFile" = $true
+}
+
+$query = @{
+  "returnDefinition" = "true"
+}
+
+$browseBodyJson = $browseBody | ConvertTo-Json -Depth 20
+$browseQuery = Invoke-Apteco -key "ExportSync" -additional @{dataViewName=$dataview;systemName=$system;returnDefinition="true"} -body $browseBodyJson -query $query
+$browseQuery | ConvertTo-Json -Depth 20
+
+$browseQuery.rows.descriptions | ConvertFrom-Csv -Delimiter "`t" -Header $browseQuery.export.columns.columnHeader 
+
+exit 0
+
+################################################
+#
+# EXPORT A SELECTION AS CSV AND/OR URN FILE
+#
+################################################
+
+$filename = "$( [datetime]::Now.ToString("yyyyMMddHHmmss") ).csv"
+
+$exportBody = $browseBody + @{
+  "pathToExportTo" = "Private/$( $filename )"
+  #"pathToExportUrnFileTo" = "Private/$( $filename ).urn"
+  "output" = @{
+    "format" = "CSV" # CSV|URN|XLSX
+    "delimiter" = ";"
+    "alphaEncloser" = """"
+    "numericEncloser" = ""
+    "authorisationCode" = ""
+    "exportExtraName" = ""
+  }
 }
 
 $exportBodyJson = $exportBody | ConvertTo-Json -Depth 20
 $exportQuery = Invoke-Apteco -key "ExportSync" -additional @{dataViewName=$dataview;systemName=$system;returnDefinition="true"} -body $exportBodyJson
-$exportQuery | ConvertTo-Json
+$exportQuery | ConvertTo-Json -Depth 20
 
 
-# Download file
+#-----------------------------------------------
+# DOWNLOAD FILE
+#-----------------------------------------------
+
 # use content-type application/octet-stream for download file
 $chosenFileContent = Invoke-Apteco -key "GetFile" -additional @{dataViewName=$dataview;systemName=$system;filePath="Private/$( $filename )"}
 $chosenFileContent
