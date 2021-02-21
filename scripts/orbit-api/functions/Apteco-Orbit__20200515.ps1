@@ -324,7 +324,10 @@ Function Invoke-Apteco {
             }
 
         } catch {
-            Write-Host $_.Exception
+            #Write-Host $_.Exception.Response.StatusDescription
+            $e = ParseErrorForResponseBody($_)
+            Write-Host ( $e | ConvertTo-Json -Depth 20 )
+
             #If ($_.Exception.Response.StatusCode.value__ -eq "500") {
                 Create-AptecoSession
             #}
