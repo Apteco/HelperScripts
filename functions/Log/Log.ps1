@@ -93,7 +93,7 @@ Function Write-Log {
     )
 
     # If the variable is not present, it will create an exception
-    Get-Variable -Name "logfile" -Scope "Script"
+    $v = Get-Variable -Name "logfile" -Scope "Script"
 
     # Create an array first for all the parts of the log message
     $logarray = @(
