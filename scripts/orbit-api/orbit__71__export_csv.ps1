@@ -134,6 +134,30 @@ $browseBody = @{
       "variableName" = "CuLastna"
       "columnHeader" = "Lastname"
       "detail" = "Description" # Code|Description
+    },
+    <#@{
+      "id" = "3"
+      #"variableName" = "Cu257JZ9"
+      "columnHeader" = "Arr"
+      "detail" = "Description" # Code|Description
+      #"unclassifiedFormat" = "Spaces" # FromDesign|Spaces
+      "type" = "Expression"
+      #"arrayIndex" = 0
+      "expression"='DescOf([cu257JZ9])'
+    },#>
+    @{
+      "id" = "4"
+      "variableName" = "Cu257KSU"
+      "columnHeader" = "ArrText"
+      "detail" = "Description" # Code|Description
+      #"unclassifiedFormat" = "Space" # FromDesign|Spaces
+    },
+    @{
+      "id" = "5"
+      "variableName" = "CuPrefix"
+      "columnHeader" = "Prefix"
+      "detail" = "Description" # Code|Description
+      "unclassifiedFormat" = "Empty" # FromDesign|Spaces
     }
   )
   "limits" = @{
@@ -161,7 +185,6 @@ $browseQuery | ConvertTo-Json -Depth 20
 $browseQuery.rows.descriptions | ConvertFrom-Csv -Delimiter "`t" -Header $browseQuery.export.columns.columnHeader 
 
 exit 0
-
 ################################################
 #
 # EXPORT A SELECTION AS CSV AND/OR URN FILE
@@ -172,7 +195,7 @@ $filename = "$( [datetime]::Now.ToString("yyyyMMddHHmmss") ).csv"
 
 $exportBody = $browseBody + @{
   "pathToExportTo" = "Private/$( $filename )"
-  #"pathToExportUrnFileTo" = "Private/$( $filename ).urn"
+  "pathToExportUrnFileTo" = "Private/$( $filename ).urn"
   "output" = @{
     "format" = "CSV" # CSV|URN|XLSX
     "delimiter" = ";"

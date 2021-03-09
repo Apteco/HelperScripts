@@ -73,10 +73,13 @@ $params = @{
     dataViewName=$dataview
     systemName=$system
     directoryPath=$chooseRoot.path
-    offset=10
-    count=30
 }
-$files = Invoke-Apteco -key "GetFiles" -additional $params
+
+$query = @{
+    offset=0
+    count=50
+}
+$files = Invoke-Apteco -key "GetFiles" -additional $params -query $query
 
 # List the result
 $files.list | ft
@@ -85,7 +88,7 @@ $files.list | ft
 $chooseFile = $files.list | where { $_.type -in @("Selection") } | Out-GridView -PassThru
 #$chooseFile = $files.list | where { $_.name -eq "ActiveCustomers.xml" }
 
-
+exit 0
 #-----------------------------------------------
 # LOAD QUERY DEFINITION IN JSON (INSTEAD OF LOADING RAW XML)
 #-----------------------------------------------

@@ -73,10 +73,12 @@ $params = @{
     dataViewName=$dataview
     systemName=$system
     directoryPath=$chooseRoot.path
-    offset=10
-    count=30
 }
-$files = Invoke-Apteco -key "GetFiles" -additional $params
+$query = @{
+    offset=0
+    count=50
+}
+$files = Invoke-Apteco -key "GetFiles" -additional $params -query $query
 
 # List the result
 $files.list | ft
