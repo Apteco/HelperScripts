@@ -47,11 +47,3 @@ Function Prepare-MultipartUpload {
 
 }
 
-<#
-#$headers.accept = "application/json, text/plain, */*"
-$part = Prepare-MultipartUpload -path "D:\Scripts\TriggerDialog\v2\swagger\Unbenannt1.xlsx"
-
-Invoke-RestMethod -Method Post -Uri "$( $settings.base )/testdata?customerId=$( $customerId )&campaignId=$( $campaignId )" -Headers $headers -ContentType $part.contentType -Verbose -Body $part.body #-TransferEncoding "Deflate"
-
-#$part.body | set-content -Path ".\text.txt" -Encoding UTF8
-#>
