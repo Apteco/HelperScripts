@@ -83,7 +83,6 @@ if ( $settings.accessKey -eq "" ) {
 ################################################
 
 # settings
-#$bingKey = "AopPdMS1q3srfGOzETp7zwcX-qw4wXaGKYsWIBthadN27mHRDcGgMdg1mLEEJx6x" #( Get-SecureToPlaintext -String $settings.accessKey )
 $bingKey = "<bingkey>"
 $contentType = "application/json; charset=utf-8"
 
