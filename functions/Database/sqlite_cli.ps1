@@ -35,9 +35,10 @@
 Function Read-Sqlite {
 
     param(
-         [Parameter(Mandatory=$true)] $query
-        ,[Parameter(Mandatory=$true)] $sqliteDb
-        ,[Parameter(Mandatory=$true)] $sqliteExe
+         [Parameter(Mandatory=$true)][String] $query
+        ,[Parameter(Mandatory=$true)][String] $sqliteDb
+        ,[Parameter(Mandatory=$true)][String] $sqliteExe
+        ,[Parameter(Mandatory=$false)][bool] $convertCsv = $true
     )
 
     # Settings for format sqlite output
@@ -52,7 +53,12 @@ Function Read-Sqlite {
     [Console]::OutputEncoding = [text.encoding]::utf8
 
     # Query the database
-    $results = (( ".headers on", $query | & $sqliteExe -separator $separator -newline $newline $sqliteDb.Replace("\", "/") ) -join "`r" ) -replace $newline,"`r`n"  | ConvertFrom-Csv -Delimiter $separator 
+    $results = (( ".headers on", $query | & $sqliteExe -separator $separator -newline $newline $sqliteDb.Replace("\", "/") ) -join "`r" ) -replace $newline,"`r`n" 
+    
+    # Additional step, normally the result is in a table format, but also requesting information is possible, then $convertCsv should be $false
+    if ( $convertCsv ) {
+        $results = $results | ConvertFrom-Csv -Delimiter $separator 
+    }
     
     # Change the console output to the default
     [Console]::OutputEncoding = [text.encoding]::GetEncoding($originalConsoleCodePage)
@@ -63,3 +69,26 @@ Function Read-Sqlite {
 }
 
 
+
+
+
+
+Function ImportCsv-ToSqlite {
+
+    param(
+         [Parameter(Mandatory=$true)][String] $sourceCsv
+        ,[Parameter(Mandatory=$true)][String] $destinationTable
+        ,[Parameter(Mandatory=$true)][String] $sqliteDb
+        ,[Parameter(Mandatory=$true)][String] $sqliteExe
+        #,[Parameter(Mandatory=$false)][String] $separator = "`t"
+    )
+
+
+    # import into the database
+    #    ".mode csv",".separator \t",".import marketing_jobs.csv jobs" | .\sqlite3.exe jobs2.sqlite
+    $results = ".mode csv",".separator \t",".import '$( $sourceCsv.Replace("\", "/") )' '$( $destinationTable )'" | & $sqliteExe $sqliteDb.Replace("\", "/")
+
+    # Return the results
+    return $results
+
+}
