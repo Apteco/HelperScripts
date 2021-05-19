@@ -1,10 +1,21 @@
+<#
 
+# Do it with a file like a picture
+$mp = Prepare-MultipartUpload -path "image.jpg"
+
+# Do it directly with text information
+$csv = import-csv "test.csv" -Encoding UTF8 -Delimiter ";"
+$csvString = $csv | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
+$mp = Prepare-MultipartUpload -string $csvString
+
+
+#>
 function Prepare-MultipartUpload {
     [CmdletBinding()]
 
     param(
         [Parameter(Mandatory=$false)][String]$path = "",
-        [Parameter(Mandatory=$false)][String]$string = "",
+        [Parameter(Mandatory=$false)][String[]]$string = @(""),
         [Parameter(Mandatory=$false)]$part = $false
     )
     
@@ -18,7 +29,7 @@ function Prepare-MultipartUpload {
         $uploadEncoding = "ISO-8859-1" #"UTF-8"
         $crlf = "`r`n";
 
-        # Read a file
+        # Read a file()
         if ( $path -ne "" ) {
             # if multipart, remove the part prefix
             $fileItem = Get-Item -Path $path
@@ -35,7 +46,9 @@ function Prepare-MultipartUpload {
 
         # Use a string
         if ( $string -ne "" ) {
-            $fileBytes = [Text.Encoding]::UTF8.GetBytes($string)
+            $oneString = $string -join $crlf
+            $fileBytes = [Text.Encoding]::UTF8.GetBytes( $oneString )
+            $filename = "$( [System.Guid]::NewGuid() ).txt"
         }
 
         # Encode the string
