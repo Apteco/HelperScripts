@@ -1,49 +1,79 @@
 
+function Prepare-MultipartUpload {
+    [CmdletBinding()]
 
-Function Prepare-MultipartUpload {
     param(
-        [Parameter(Mandatory=$true)][String]$path,
+        [Parameter(Mandatory=$false)][String]$path = "",
+        [Parameter(Mandatory=$false)][String]$string = "",
         [Parameter(Mandatory=$false)]$part = $false
     )
-
-    # standard settings
-    $uploadEncoding = "ISO-8859-1" #"UTF-8"
-    $crlf = "`r`n";
     
-    # if multipart, remove the part prefix
-    $fileItem = Get-Item -Path $path
-    if ($part) {
-        $fileName = $fileItem.Name.Substring(0, $fileItem.Name.lastIndexOf('.')) 
-    } else {
-        $fileName = $fileItem.Name
+    begin {
+        
+        if ( $path -eq "" -and $string -eq "" ) {
+            throw [System.IO.InvalidDataException] "You must define either path or string. Both is empty"
+        }
+
+        # standard settings
+        $uploadEncoding = "ISO-8859-1" #"UTF-8"
+        $crlf = "`r`n";
+
+        # Read a file
+        if ( $path -ne "" ) {
+            # if multipart, remove the part prefix
+            $fileItem = Get-Item -Path $path
+            if ($part) {
+                $fileName = $fileItem.Name.Substring(0, $fileItem.Name.lastIndexOf('.')) 
+            } else {
+                $fileName = $fileItem.Name
+            }
+
+            # get file, load and encode it
+            $fileBytes = [System.IO.File]::ReadAllBytes($fileItem.FullName)
+
+        }
+
+        # Use a string
+        if ( $string -ne "" ) {
+            $fileBytes = [Text.Encoding]::UTF8.GetBytes($string)
+        }
+
+        # Encode the string
+        $fileEncoded = [System.Text.Encoding]::GetEncoding($uploadEncoding).GetString($fileBytes)
+
     }
     
-    # get file, load and encode it
-    $fileBytes = [System.IO.File]::ReadAllBytes($fileItem.FullName)
-    $fileEncoded = [System.Text.Encoding]::GetEncoding($uploadEncoding).GetString($fileBytes)
+    process {
+        
 
-    # create guid for multipart upload
-    $boundary = [System.Guid]::NewGuid().ToString().replace("-","").PadLeft(57,"-")
 
-    # Get the mime type
-    $mimeType = [System.Web.MimeMapping]::GetMimeMapping($fileName)
+        # create guid for multipart upload
+        $boundary = [System.Guid]::NewGuid().ToString().replace("-","").PadLeft(57,"-")
 
-    # create body
-    $body = (
-        #"multipart/form-data; boundary=$( $boundary )",
-        "--$( $boundary )",
-        "Content-Disposition: form-data; name=`"file`"; filename=`"$( $fileName )`"",
-        "Content-Type: $( $mimeType )$( $crlf )",
-        #"Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet$( $crlf )",
-        $fileEncoded,
-        "--$( $boundary )--$( $crlf )" 
-    ) -join $crlf
+        # Get the mime type
+        $mimeType = [System.Web.MimeMapping]::GetMimeMapping($fileName)
 
-    # put it together
-    @{
-        "body"=$body
-        "contentType"="multipart/form-data; boundary=$( $boundary )"
+        # create body
+        $body = (
+            #"multipart/form-data; boundary=$( $boundary )",
+            "--$( $boundary )",
+            "Content-Disposition: form-data; name=`"file`"; filename=`"$( $fileName )`"",
+            "Content-Type: $( $mimeType )$( $crlf )",
+            #"Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet$( $crlf )",
+            $fileEncoded,
+            "--$( $boundary )--$( $crlf )" 
+        ) -join $crlf
+
     }
+    
+    end {
+        
+        # put it together
+        @{
+            "body"=$body
+            "contentType"="multipart/form-data; boundary=$( $boundary )"
+        }
 
+    }
 }
 
