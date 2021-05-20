@@ -225,21 +225,21 @@ Function Split-File {
                     }
                     
                     # Output rows
-                    $outputlines = $inputlines | Select $outputCols | ConvertTo-Csv -Delimiter $outputDelimiter -NoTypeInformation
-                    
+                    $outputrows = $inputlines | Select $outputCols | ConvertTo-Csv -Delimiter $outputDelimiter -NoTypeInformation
+                    $outputlines =  $outputrows
+
                     # remove double quotes, tributes to https://stackoverflow.com/questions/24074205/convertto-csv-output-without-quotes
                     if ( $outputDoubleQuotes -eq $false ) {
-                        $outputlines = $outputlines | % { $_ -replace  `
+                        $outputlines = $outputlines | ForEach { $_ -replace  `
                                 "\G(?<start>^|$( $outputDelimiter ))((""(?<output>[^,""]*?)""(?=$( $outputDelimiter )|$))|(?<output>"".*?(?<!"")("""")*?""(?=$( $outputDelimiter )|$))|(?<output>))",'${start}${output}'} 
                                 # '\G(?<start>^|,)(("(?<output>[^,"]*?)"(?=,|$))|(?<output>".*?(?<!")("")*?"(?=,|$))|(?<output>))','${start}${output}'} 
                     }
 
                     # result to return
-
                     if ($header) {
                         $returnLines = $outputlines | Select -SkipLast 1
                     } else {
-                        $returnLines = $outputlines | Select -Skip 1
+                        $returnLines =  $outputlines | Select -Skip 1
                     }                
 
                     $res = @{
@@ -336,7 +336,8 @@ Function Split-File {
                         $headerRowParsed = $res.lines
                         #$rows = $rows + $res.lines  
                     } else {
-                        [void]$rows.AddRange($res.lines)  
+                        # Adding all in an array to make sure also 1 record is processed correct
+                        [void]$rows.AddRange( [System.Collections.ArrayList]@( $res.lines ))
                     }
                                 
                 }
