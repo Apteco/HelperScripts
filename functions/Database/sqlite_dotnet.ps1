@@ -16,6 +16,68 @@ sqlite-Load-DataTable -sqlCommand "Select * from households limit 100"
 
 #>
 
+
+
+<#
+
+# Open up connection
+sqlite-Load-Assemblies -dllFile "C:\Program Files\Apteco\FastStats Designer\SQLite\System.Data.SQLite.dll"
+$sqliteConnection = sqlite-Open-Connection -sqliteFile ":memory:" -new
+
+# Create temporary table
+$sqliteCommand = $sqliteConnection.CreateCommand()
+$sqliteCommand.CommandText = @"
+CREATE TABLE "Data" (
+	"key"	TEXT,
+	"value"	TEXT
+);
+"@
+$sqliteCommand.ExecuteNonQuery()
+
+# Prepare data insertion
+# https://docs.microsoft.com/de-de/dotnet/standard/data/sqlite/bulk-insert
+$sqliteTransaction = $sqliteConnection.BeginTransaction()
+$sqliteCommand = $sqliteConnection.CreateCommand()
+$sqliteCommand.CommandText = "INSERT INTO data (key, value) VALUES (:key, :value)"
+
+# Prepare data parameters
+$sqliteParameterKey = $sqliteCommand.CreateParameter()
+$sqliteParameterKey.ParameterName = ":key"
+$sqliteCommand.Parameters.Add($sqliteParameterKey)
+
+$sqliteParameterValue = $sqliteCommand.CreateParameter()
+$sqliteParameterValue.ParameterName = ":value"
+$sqliteCommand.Parameters.Add($sqliteParameterValue)
+
+# Inserting the data with 1m records and 2 columns took 77 seconds
+$t = Measure-Command {
+    # Insert the data
+    For ( $i = 0 ; $i -lt 1000000 ; $i++ ) {
+        $sqliteParameterKey.Value = $i
+        $sqliteParameterValue.Value = Get-Random
+        [void]$sqliteCommand.ExecuteNonQuery()
+    }
+}
+
+"Inserted the data in $( $t.TotalSeconds ) seconds"
+
+# Commit the transaction
+$sqliteTransaction.Commit()
+
+# Read the data
+$t = Measure-Command {
+    sqlite-Load-Data -sqlCommand "Select count(*) from data" -connection $sqliteConnection | ft
+}
+
+"Queried the data in $( $t.TotalSeconds ) seconds"
+
+
+# Close the connection
+$sqliteConnection.Dispose()
+
+
+  
+  #>
 Function sqlite-Load-DataTable {
 
     param(   
@@ -85,11 +147,12 @@ Function sqlite-Open-Connection {
 
     param(   
         [Parameter(Mandatory=$true)][String]$sqliteFile
-       ,[Parameter(Mandatory=$false)][switch]$readonly = $true     # switch if it should open read only
+       ,[Parameter(Mandatory=$false)][switch]$readonly = $false     # switch if it should open read only
+       ,[Parameter(Mandatory=$false)][switch]$new = $false     # switch if it should open read only
     )
 
-
-    $connString = "Data Source=""$( $sqliteFile )"";Version=3;"
+    #Data Source=:memory:;Version=3;New=True;
+    $connString = "Data Source=""$( $sqliteFile )"";Version=3;New=$( $new );Read Only=$( $readonly );"
 
     $conn = New-Object -TypeName System.Data.SQLite.SQLiteConnection
     $conn.ConnectionString = $connString
@@ -114,9 +177,8 @@ Function sqlite-Load-Data {
     $dataAdapter.SelectCommand = $cmd
 
     $data = New-Object -TypeName System.Data.DataSet
-    $dataAdapter.fill($data)
-    $data.tables.rows
+    [void]$dataAdapter.fill($data)
 
-    return $data
+    $data.tables.rows
 
 }
