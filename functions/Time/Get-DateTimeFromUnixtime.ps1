@@ -1,4 +1,4 @@
-﻿<#
+<#
  .SYNOPSIS
   Shows a unix timestamp as a datetime object
 
@@ -36,6 +36,10 @@
    # Converts a unix timestamp with milliseconds as integer into a System.DateTime object
    Get-DateTimeFromUnixtime -unixtime 1591775146091 -inMilliseconds
 
+ .EXAMPLE
+   # Creates a DateTime from a Unixtimestamp and outputs as ISO 8601 format
+   ( Get-DateTimeFromUnixtime -unixtime $lastSession.timestamp ).ToString("yyyy-MM-ddTHH:mm:ssK")
+
 #>
 
 
@@ -53,7 +57,8 @@ Function Get-DateTimeFromUnixtime {
         $divisor = 1
     }
 
-    $timestamp = (Get-Date 01.01.1970).AddSeconds($unixtime/$divisor)
+    $timestamp = (Get-Date -Date "1970/01/01").AddSeconds($unixtime/$divisor)
+    $timestamp = [System.TimeZoneInfo]::ConvertTimeFromUtc($timestamp,[System.TimeZoneInfo]::Utc) # Load the date with the utc timezone first
 
     if ( $convertToLocalTimezone ) {
         $timestamp = [System.TimeZoneInfo]::ConvertTimeFromUtc($timestamp,[System.TimeZoneInfo]::Local)
