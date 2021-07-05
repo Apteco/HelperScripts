@@ -11,3 +11,7 @@ _archive
 _dev
 *.token
 *.7z
+*.dll
+*.exe
+**/lib/**
+*.parquet
