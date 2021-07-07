@@ -1,3 +1,4 @@
+
 # Example is based on: https://github.com/G-Research/ParquetSharp/blob/master/csharp.test/TestParquetFileReader.cs
 
 
@@ -27,6 +28,7 @@ $dlls | ForEach {
 #>
 
 $reader = [ParquetSharp.ParquetFileReader]::new("example\example.parquet")
+#$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Downloads\area1.parquet")
 
 
 
@@ -73,24 +75,24 @@ $chosenSchema | ForEach {
 
     # Prepare reading the data in batches
     $rowsCount = $rowGroupReader.MetaData.NumRows
-    $batchSize = 101
+    $batchSize = 450
     $batches = [math]::Ceiling($rowsCount / $batchSize)
-    $colValues = [System.Collections.ArrayList]@()
     $colNames = [System.Collections.ArrayList]@()
-    #$colMemory = [Hashtable]@{}
+    $colMemory = [Hashtable]@{}
 
-    For ( $i = 0 ; $i -lt 2 ; $i++ ) { # batches
+    For ( $i = 0 ; $i -lt 4 ; $i++ ) { # batches
         # In the last batch call with the exact number of remaining rows
         if ( $i -eq $batches - 1 ) {
             $batchSize = $rowsCount % ( $i * $batchSize)
         }
+
+        $colValues = [System.Collections.ArrayList]@()
 
 
         For ( $c = 0 ; $c -lt $meta.NumColumns ; $c++ ) { # ++$c or $c++ ? #$meta.NumColumns
 
             $v = [System.Collections.ArrayList]@()
 
-            $columnReader = $rowGroupReader.Column( $c )
             
             # Return the column description
             <#
@@ -110,13 +112,14 @@ $chosenSchema | ForEach {
             
             #>
 
-            $columnDescriptor = $columnReader.ColumnDescriptor
-            "Column $( $c ) - $( $columnDescriptor.Name )"
-
             # Only saves column names and pointers in the first batch
             If ($i -eq 0) {
+                $columnReader = $rowGroupReader.Column( $c )
+                $columnDescriptor = $columnReader.ColumnDescriptor
+                "Column $( $c ) - $( $columnDescriptor.Name )"
                 [void]$colNames.Add( $columnDescriptor.Name )
-                #$colMemory.Add( $c, $rowGroupReader.Column($c).LogicalReader() ) # Remember the current pointers for later continuation
+                #$colMemory | Add-Member -MemberType NoteProperty -Name $c -Value $columnReader.LogicalReader()
+                $colMemory.Add( $c, $columnReader.LogicalReader() ) # Remember the current pointers for later continuation
             }
 
             # Return the metadata of a column chunk
@@ -135,27 +138,9 @@ $chosenSchema | ForEach {
             
             #>
 
-            #$colChunkMetaData = $rowGroupReader.MetaData.GetColumnChunkMetaData($c)
-            [void]$columnReader.Skip( $i * $batchSize ) # skip x rows
-            #$columnReader.LogicalReader().BufferLength
-            #$columnReader.LogicalReader().LogicalType
-            #$columnReader.LogicalReader().HasNext
-            $logicalReader = $columnReader.LogicalReader()
-
             # Read the data in batches
-            # Call always the next n rows            
-            #[void]$v.AddRange( $colMemory.$c.ReadAll($batchSize) )
-            [void]$v.AddRange($columnReader.LogicalReader().ReadAll($batchSize))
-            $logicalReader.ReadBatch()
-
-            <#
-            Do {
-                $v.AddRange($logicalReader.ReadAll(100))
-                "Hello"
-                #$columnReader.LogicalReader().HasNext
-            } until ( $logicalReader.HasNext -eq $false )
-            #>
-
+            # Call always the next n rows   
+            [void]$v.AddRange( $colMemory[$c].ReadAll($batchSize) )
             [void]$colValues.Add($v)
 
         }
@@ -174,6 +159,10 @@ $chosenSchema | ForEach {
     }
 
 }
+
+<#
+Important note: https://github.com/G-Research/ParquetSharp/issues/72
+#>
 
 
 <#
