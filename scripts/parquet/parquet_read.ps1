@@ -80,7 +80,7 @@ $chosenSchema | ForEach {
     $colNames = [System.Collections.ArrayList]@()
     $colMemory = [Hashtable]@{}
 
-    For ( $i = 0 ; $i -lt 4 ; $i++ ) { # batches
+    For ( $i = 0 ; $i -lt $batches ; $i++ ) { # batches
         # In the last batch call with the exact number of remaining rows
         if ( $i -eq $batches - 1 ) {
             $batchSize = $rowsCount % ( $i * $batchSize)
