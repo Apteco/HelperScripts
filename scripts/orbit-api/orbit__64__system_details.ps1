@@ -92,3 +92,9 @@ $folders.list.folder | ft
 $folderContent = Invoke-Apteco -key "GetFolder" -additional @{dataViewName=$dataview;systemName=$system;path=$folders.list.folder.name[0]}
 $folderContent.list.variable | ft
 #$folderContent.list.variable | Out-GridView
+
+#-----------------------------------------------
+# GET ALL AT ONCE
+#-----------------------------------------------
+
+$all = Invoke-Apteco -key "GetAllFastStatsSystemItems" -additional @{"dataViewName"=$dataview;"systemName"=$system} -query @{count=100000;includeVarCodeCounts="false"}
