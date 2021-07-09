@@ -15,3 +15,4 @@ _dev
 *.exe
 **/lib/**
 *.parquet
+*.db
