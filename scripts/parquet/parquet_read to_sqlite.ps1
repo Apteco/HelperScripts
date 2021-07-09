@@ -8,11 +8,15 @@ Param(
     [hashtable] $params
 )
 
+$params = [hashtable]@{
+    "scriptPath" = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet"
+}
+
 #-----------------------------------------------
 # DEBUG SWITCH
 #-----------------------------------------------
 
-$debug = $true
+$debug = $false
 
 #-----------------------------------------------
 # INPUT PARAMETERS, IF DEBUG IS TRUE
@@ -78,7 +82,7 @@ $processId = [guid]::NewGuid()
 $settings = @{
     "logfile" = "$( $scriptPath )\parquet.log"
     "sqliteDll" =  "C:\Program Files\Apteco\FastStats Designer\sqlite-netFx46-binary-x64-2015-1.0.113.0\System.Data.SQLite.dll"
-    "sqliteDb" = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet\$( $processId ).sqlite"
+    "sqliteDb" = "C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet\example.db" #"C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet\$( $processId ).sqlite"
 }
 
 # Allow only newer security protocols
@@ -121,11 +125,12 @@ Get-ChildItem -Path ".\$( $functionsSubfolder )" -Recurse -Include @("*.ps1") | 
 #-----------------------------------------------
 # LOAD MORE LIBS (DLL,EXE)
 #-----------------------------------------------
-
+<#
 $libExecutables = Get-ChildItem -Path ".\$( $libSubfolder )" -Recurse -Include @("*.exe","*.dll") 
 $libExecutables | ForEach {
     "... $( $_.FullName )"
 }
+#>
 
 
 #-----------------------------------------------
@@ -232,8 +237,7 @@ if ( $paramsExisting ) {
 # Check if 64 bit
 [Environment]::Is64BitProcess
 #>
-
-
+[System.Environment]::SetEnvironmentVariable("SQLITEDB",$settings.sqliteDb)
 
 ################################################
 #
@@ -245,11 +249,11 @@ if ( $paramsExisting ) {
 # PREPARE CONNECTION
 #-----------------------------------------------
 
-Write-Log -message "Loading sqlite assembly from '$( $settings.sqliteDll )'"
+Write-Log -message "Loading cache assembly from '$( $settings.sqliteDll )'"
 
 sqlite-Load-Assemblies -dllFile $settings.sqliteDll
 
-Write-Log -message "Establishing connection to sqlite database '$( $settings.sqliteDB )'"
+Write-Log -message "Establishing connection to cache database '$( $settings.sqliteDB )'"
 
 $retries = 10
 $retrycount = 0
@@ -286,7 +290,7 @@ while (-not $completed) {
 # INSTANTIATE PARQUET READER
 #-----------------------------------------------
 
-$reader = [ParquetSharp.ParquetFileReader]::new("example\example.parquet")
+$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet\example.parquet")
 #$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Downloads\area1.parquet")
 
 
@@ -502,8 +506,11 @@ $reader.Dispose()
 # CHECK RESULT
 #-----------------------------------------------
 
-Write-Log -message "Closing connection to sqlite database"
 
-# Close the connection
-$sqliteConnection.Dispose()
-
+# Close the connection if it is not in-memory
+if ( $settings.sqliteDb -like "*:memory:*"  ) { 
+    Write-Log -message "Closing connection to cache"
+    $sqliteConnection.Dispose()
+} else {
+    Write-Log -message "Keeping the database open"
+}
