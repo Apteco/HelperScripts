@@ -25,3 +25,17 @@ It is important to have `ParquetSharp.dll` and `ParquetSharpNative.dll` in the s
 # Example usage
 
 Try to use the script, more information to follow
+
+Some example data can be downloaded here: http://www.synthcity.xyz/download.html
+
+Just put it into your `example` subfolder
+
+```PowerShell
+New-Item -Name "example" -ItemType Directory
+wget -Uri "https://rdr.ucl.ac.uk/s/5cc49e8bcc7497581b30" -OutFile ".\example\example.parquet"
+```
+
+Then you are good to go to dive into the both scripts:
+
+* `parquet_read.ps1` allows you to read the data from parquet into memory and renders it in PowerShell Out-GridView per page
+* `parquet_read_to_sqlite.ps1` reads the data in batches and puts it into a sqlite database which is a good temporary cache for following processes

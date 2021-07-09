@@ -290,8 +290,8 @@ while (-not $completed) {
 # INSTANTIATE PARQUET READER
 #-----------------------------------------------
 
-$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet\example.parquet")
-#$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Downloads\area1.parquet")
+#$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Documents\GitHub\AptecoHelperScripts\scripts\parquet\example.parquet")
+$reader = [ParquetSharp.ParquetFileReader]::new("C:\Users\Florian\Downloads\area1.parquet")
 
 
 #-----------------------------------------------
@@ -438,7 +438,7 @@ $chosenSchema | ForEach {
         # INSERT DATA AND COMMIT
         #-----------------------------------------------
 
-        Write-Log -message "Inserting $( $batchSize ) rows"
+        #Write-Log -message "Inserting $( $batchSize ) rows"
 
         # Inserting the data with 1m records and 2 columns took 77 seconds
         $t = Measure-Command {
@@ -467,7 +467,7 @@ $chosenSchema | ForEach {
 
         }
 
-        Write-Log -message "Inserted the data in $( $t.TotalSeconds ) seconds and will commit now"
+        Write-Log -message "Inserted $( $batchSize ) rows in $( $t.TotalSeconds ) seconds and will commit now"
         $totalSeconds += $t.TotalSeconds
 
     }
