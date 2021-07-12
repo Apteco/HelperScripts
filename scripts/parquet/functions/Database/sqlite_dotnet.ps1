@@ -14,6 +14,8 @@
 sqlite-Load-Assemblies -dllFile "C:\Program Files\Apteco\FastStats Designer\System.Data.SQLite.dll"
 sqlite-Load-DataTable -sqlCommand "Select * from households limit 100"
 
+Another example of inserting data pretty quickly: https://github.com/Apteco/HelperScripts/blob/master/scripts/parquet/parquet_read%20to_sqlite.ps1
+
 #>
 
 
@@ -149,10 +151,11 @@ Function sqlite-Open-Connection {
         [Parameter(Mandatory=$true)][String]$sqliteFile
        ,[Parameter(Mandatory=$false)][switch]$readonly = $false     # switch if it should open read only
        ,[Parameter(Mandatory=$false)][switch]$new = $false     # switch if it should open read only
+       ,[Parameter(Mandatory=$false)][String]$additionalParameters = ""     # switch if it should open read only
     )
 
     #Data Source=:memory:;Version=3;New=True;
-    $connString = "Data Source=""$( $sqliteFile )"";Version=3;New=$( $new );Read Only=$( $readonly );"
+    $connString = "Data Source=""$( $sqliteFile )"";Version=3;New=$( $new );Read Only=$( $readonly );$( $additionalParameters )"
 
     $conn = New-Object -TypeName System.Data.SQLite.SQLiteConnection
     $conn.ConnectionString = $connString
