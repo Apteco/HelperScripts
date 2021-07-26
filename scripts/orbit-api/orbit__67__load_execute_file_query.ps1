@@ -86,6 +86,15 @@ $files.list | ft
 # Choose a selection file
 $chooseFile = $files.list | where { $_.type -in @("Selection") } | Out-GridView -PassThru
 #$chooseFile = $files.list | where { $_.name -eq "ActiveCustomers.xml" }
+$chooseFile = $files.list | where { $_.type -in @("Cube") } | Out-GridView -PassThru
+
+
+#-----------------------------------------------
+# LOAD RAW CONTENT OF A SELECTION (CAN BE XML,CSV,...)
+#-----------------------------------------------
+
+$chosenFileContent = Invoke-Apteco -key "GetFile" -additional @{dataViewName=$dataview;systemName=$system;filePath=$chooseFile.path}
+$chosenFileContent
 
 
 #-----------------------------------------------
@@ -115,3 +124,10 @@ $chosenFileExecution = Invoke-Apteco -key "CountQueryFromFileSync" -additional @
 # Output result to console
 $chosenFileExecution | convertto-json -depth 8
 
+#-----------------------------------------------
+# TRANSFORM XML INTO HASHTABLE/JSON FORMAT
+#-----------------------------------------------
+<#
+$treeSource = [xml]$chosenFileContent.Substring(3) 
+$treeSourceHt = Convert-XMLtoPSObject -XML $treeSource -attributesPrefix ""
+#>
