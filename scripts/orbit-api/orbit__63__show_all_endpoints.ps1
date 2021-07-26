@@ -31,3 +31,27 @@ Set-Location -Path $scriptPath
 
 $Script:endpoints | out-gridview
 
+
+#-----------------------------------------------
+# SET DATAVIEW AND SYSTEM
+#-----------------------------------------------
+<#
+# Set DataView
+$dataview = $settings.login.dataView
+
+# Get Systems
+$systems = Invoke-Apteco -key "GetFastStatsSystems" -additional @{dataViewName=$dataview}
+
+# Choose system 
+# TODO [ ] is viewName the correct one?
+if ( $systems.totalCount -gt 1 ) {
+    $system = ( $systems.list | Out-GridView -PassThru ).viewName
+} elseif ( $systems.totalCount -eq 0 ) {
+    "No systems"
+    exit 0
+} else {
+    $system = $systems.list[0].viewName
+}
+
+$all = Invoke-Apteco -key "GetAllFastStatsSystemItems" -additional @{"dataViewName"=$dataview;"systemName"=$system} -query @{count=100000;includeVarCodeCounts="false"}
+#>
