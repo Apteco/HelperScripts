@@ -96,3 +96,5 @@ $params = @{
     } | ConvertTo-Json -Depth 20
 }
 $audienceCount = Invoke-Apteco @params
+
+$audienceCount | fl
