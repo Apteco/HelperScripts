@@ -30,6 +30,6 @@ function ConvertFrom-Xml {
   }
 }
 
-[xml[]] (Get-Content -Raw file[12].xml) | ConvertFrom-Xml | ConvertTo-Json -Depth 3
+#[xml[]] (Get-Content -Raw file[12].xml) | ConvertFrom-Xml | ConvertTo-Json -Depth 3
 
 # -Depth might need tweaking depending on the depth of the XML file
