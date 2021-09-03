@@ -92,3 +92,14 @@ Function ImportCsv-ToSqlite {
     return $results
 
 }
+
+
+Function Sanitize-FilenameSQLITE {
+
+    param(
+         [Parameter(Mandatory=$true)][String]$Filename
+    )
+
+    return $Filename -replace '\\','/'
+
+}
