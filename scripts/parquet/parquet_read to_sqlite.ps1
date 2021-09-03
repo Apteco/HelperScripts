@@ -249,6 +249,11 @@ if ( $paramsExisting ) {
 # PREPARE CONNECTION
 #-----------------------------------------------
 
+# Journal Mode = MEMORY can cause data loss as everything is written into memory instead of the disk
+# Page size is 4096 as default
+# Cache size is -2000 as default
+$additionalParameters = "Journal Mode=MEMORY;Cache Size=-4000;Page Size=4096;"
+
 Write-Log -message "Loading cache assembly from '$( $settings.sqliteDll )'"
 
 sqlite-Load-Assemblies -dllFile $settings.sqliteDll
@@ -263,7 +268,7 @@ $completed = $false
 while (-not $completed) {
     try {
         #$sqliteConnection = sqlite-Open-Connection -sqliteFile ":memory:" -new
-        $sqliteConnection = sqlite-Open-Connection -sqliteFile "$( $settings.sqliteDB )" -new
+        $sqliteConnection = sqlite-Open-Connection -sqliteFile "$( $settings.sqliteDB )" -new -additionalParameters $additionalParameters
         Write-Log -message "Connection succeeded."
         $completed = $true
     } catch [System.Management.Automation.MethodInvocationException] {
@@ -278,6 +283,16 @@ while (-not $completed) {
         }
     }
 }
+
+
+# Setting some pragmas for the connection
+$sqlitePragmaCommand = $sqliteConnection.CreateCommand()
+
+# With an unplanned event this can cause data loss, but in this case the database is not persistent, so good to go
+# Good explanation here: https://stackoverflow.com/questions/1711631/improve-insert-per-second-performance-of-sqlite
+$sqlitePragmaCommand.CommandText = "PRAGMA synchronous = OFF"
+[void]$sqlitePragmaCommand.ExecuteNonQuery()
+Write-Log -message "Setting the pragma '$( $sqlitePragmaCommand.CommandText )'"
 
 
 ################################################
@@ -450,7 +465,8 @@ $chosenSchema | ForEach {
                     For ( $x = 0 ; $x -lt $meta.NumColumns ; $x++ ) {
                         $sqliteInsertCommand.Parameters[$x].Value = $colValues[$x][$y]
                     }
-                    [void]$sqliteInsertCommand.ExecuteNonQuery()                
+                    [void]$sqliteInsertCommand.ExecuteNonQuery()
+                    $sqliteInsertCommand.Reset()
                 }
 
             } catch {
