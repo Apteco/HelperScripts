@@ -77,6 +77,19 @@ $json | set-content "testjson.json" -Encoding UTF8
     }
 }
 
+The namespaces hashtable can contain something like this:
+
+Name                           Value
+----                           -----
+SOAP-ENV                       http://schemas.xmlsoap.org/soap/envelope/
+ns2                            http://agnitas.org/ws/schemas
+
+$xmlObj = [xml]$xmlInputString
+$ns = [Hashtable]@{
+  "SOAP-ENV" = "http://schemas.xmlsoap.org/soap/envelope/"
+  "ns2" = "http://agnitas.org/ws/schemas"
+}
+$pscustom = $xmlObj | Convert-XMLtoPSObject -ignoreNamespaces $ns
 
 .INPUTS
   xml - Should be loaded as an xml object like [xml]$xmlString
@@ -89,9 +102,10 @@ $json | set-content "testjson.json" -Encoding UTF8
 Function Convert-XMLtoPSObject {
   
   Param (
-     [parameter(Mandatory=$true, ValueFromPipeline)] $XML
+     [parameter(Mandatory=$true, ValueFromPipeline)]$XML
     ,[parameter(Mandatory=$false)][String] $attributesPrefix = "@"
-  )
+    ,[parameter(Mandatory=$false)][Hashtable] $ignoreNamespaces = [Hashtable]@{}
+    )
   
   begin {
   
@@ -126,7 +140,9 @@ Function Convert-XMLtoPSObject {
     $xml.ChildNodes | where { $_.NodeType -notin @([System.Xml.XmlNodeType]::SignificantWhitespace)  } | foreach {
       
       $n = $_
-      $name = $n.Get_name() # if there is an attribute with "name", then this function is the safer way to get the tag name
+      $nameToCheck = $n.Get_name() # if there is an attribute with "name", then this function is the safer way to get the tag name
+      $name = $ns.Keys | % { if ( $nameToCheck -like "$( $_ ):*" ) { $nameToCheck -replace "$( $_ ):",""  } }
+
 
       #if ($name -in @( "Messages" )) {
       #  Write-Host "Hello WOrld"
@@ -135,7 +151,7 @@ Function Convert-XMLtoPSObject {
       # Decide if go recursively or use the current value
       if ($n.HasChildNodes) {
         if ($n.ChildNodes.Count -gt 1) {
-          $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n -attributesPrefix $attributesPrefix )
+          $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n -attributesPrefix $attributesPrefix -ignoreNamespaces $ignoreNamespaces )
         } else {
           if ($n.ChildNodes[0].NodeType -eq [System.Xml.XmlNodeType]::Text) {
             # Handle attributes of childrens tag
@@ -158,7 +174,7 @@ Function Convert-XMLtoPSObject {
               $value = $n.ChildNodes[0].Value
             }            
           } else {
-            $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n -attributesPrefix $attributesPrefix )
+            $value = [PSCustomObject]( Convert-XMLtoPSObject -XML $n -attributesPrefix $attributesPrefix -ignoreNamespaces $ignoreNamespaces )
           }
         }
       } else {
@@ -202,6 +218,7 @@ Function Convert-XMLtoPSObject {
       
       # Otherwise just save that entry to the object
       } else {
+        #$ns.Keys | % { $name -like "$( $_ ):*"}
         $return | Add-Member -MemberType NoteProperty -Name $name -Value $value
       }
 
@@ -214,4 +231,3 @@ Function Convert-XMLtoPSObject {
     return $return
   }
 }
-
