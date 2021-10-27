@@ -5,7 +5,7 @@
 *.debug
 *.sqlite
 *.key
-*.json
+*.json*
 _archive
 *.csv
 _dev
