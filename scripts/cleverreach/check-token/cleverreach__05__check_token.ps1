@@ -4,28 +4,11 @@
 #
 ################################################
 
-Param(
-    [hashtable] $params
-)
-
 #-----------------------------------------------
 # DEBUG SWITCH
 #-----------------------------------------------
 
-$debug = $true
-
-
-#-----------------------------------------------
-# INPUT PARAMETERS, IF DEBUG IS TRUE
-#-----------------------------------------------
-
-# TODO [ ] check input parameter
-
-if ( $debug ) {
-    $params = [hashtable]@{
-	    scriptPath= "C:\Users\Florian\Documents\GitHub\AptecoCustomChannels\CleverReach"
-    }
-}
+$debug = $false
 
 
 ################################################
@@ -46,15 +29,12 @@ https://rest.cleverreach.com/explorer/v3
 #
 ################################################
 
-if ( $debug ) {
-    # Load scriptpath
-    if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
-        $scriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-    } else {
-        $scriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
-    }
+
+# Load scriptpath
+if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
+    $scriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 } else {
-    $scriptPath = "$( $params.scriptPath )" 
+    $scriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
 }
 Set-Location -Path $scriptPath
 
@@ -65,107 +45,46 @@ Set-Location -Path $scriptPath
 #
 ################################################
 
-# General settings
-$functionsSubfolder = "functions"
-$libSubfolder = "lib"
-$settingsFilename = "settings.json"
-$moduleName = "CLVRTEST"
-$processId = [guid]::NewGuid()
+$script:moduleName = "CRTEST"
 
-# Load settings
-$settings = Get-Content -Path "$( $scriptPath )\$( $settingsFilename )" -Encoding UTF8 -Raw | ConvertFrom-Json
+try {
 
-# Allow only newer security protocols
-# hints: https://www.frankysweb.de/powershell-es-konnte-kein-geschuetzter-ssltls-kanal-erstellt-werden/
-if ( $settings.changeTLS ) {
-    $AllProtocols = @(    
-        [System.Net.SecurityProtocolType]::Tls12
-        #[System.Net.SecurityProtocolType]::Tls13,
-        #,[System.Net.SecurityProtocolType]::Ssl3
-    )
-    [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
-}
+    # Load general settings
+    . ".\bin\general_settings.ps1"
 
-# more settings
-$logfile = $settings.logfile
+    # Load settings
+    . ".\bin\load_settings.ps1"
 
-# append a suffix, if in debug mode
-if ( $debug ) {
-    $logfile = "$( $logfile ).debug"
-}
+    # Load network settings
+    . ".\bin\load_networksettings.ps1"
 
+    # Load functions
+    . ".\bin\load_functions.ps1"
 
-################################################
-#
-# FUNCTIONS & ASSEMBLIES
-#
-################################################
+    # Start logging
+    . ".\bin\startup_logging.ps1"
 
-# Load all PowerShell Code
-"Loading..."
-Get-ChildItem -Path ".\$( $functionsSubfolder )" -Recurse -Include @("*.ps1") | ForEach {
-    . $_.FullName
-    "... $( $_.FullName )"
-}
-<#
-# Load all exe files in subfolder
-$libExecutables = Get-ChildItem -Path ".\$( $libSubfolder )" -Recurse -Include @("*.exe") 
-$libExecutables | ForEach {
-    "... $( $_.FullName )"
+    # Load preparation ($cred)
+    . ".\bin\preparation.ps1"
+
+} catch {
+
+    Write-Log -message "Got exception during start phase" -severity ( [LogSeverity]::ERROR )
+    Write-Log -message "  Type: '$( $_.Exception.GetType().Name )'" -severity ( [LogSeverity]::ERROR )
+    Write-Log -message "  Message: '$( $_.Exception.Message )'" -severity ( [LogSeverity]::ERROR )
+    Write-Log -message "  Stacktrace: '$( $_.ScriptStackTrace )'" -severity ( [LogSeverity]::ERROR )
     
+    throw $_.exception  
+
+    exit 1
+
 }
-
-# Load dll files in subfolder
-$libExecutables = Get-ChildItem -Path ".\$( $libSubfolder )" -Recurse -Include @("*.dll") 
-$libExecutables | ForEach {
-    "Loading $( $_.FullName )"
-    [Reflection.Assembly]::LoadFile($_.FullName) 
-}
-#>
-
-################################################
-#
-# LOG INPUT PARAMETERS
-#
-################################################
-
-# Start the log
-Write-Log -message "----------------------------------------------------"
-Write-Log -message "$( $modulename )"
-Write-Log -message "Got a file with these arguments: $( [Environment]::GetCommandLineArgs() )"
-
-# Check if params object exists
-if (Get-Variable "params" -Scope Global -ErrorAction SilentlyContinue) {
-    $paramsExisting = $true
-} else {
-    $paramsExisting = $false
-}
-
-# Log the params, if existing
-if ( $paramsExisting ) {
-    $params.Keys | ForEach-Object {
-        $param = $_
-        Write-Log -message "    $( $param ) = $( $params[$param] )"
-    }
-}
-
 
 ################################################
 #
 # PROGRAM
 #
 ################################################
-
-
-#-----------------------------------------------
-# AUTHENTICATION
-#-----------------------------------------------
-
-$apiRoot = $settings.base
-$contentType = "application/json; charset=utf-8"
-$header = @{
-    "Authorization" = "Bearer $( Get-SecureToPlaintext -String $settings.login.accesstoken )"
-}
 
 
 #-----------------------------------------------
@@ -209,6 +128,7 @@ try {
     
     # Exception
     throw [System.IO.InvalidDataException] "Test was not successful"  
+    
 }
 
 
