@@ -247,7 +247,7 @@ Write-Log -message "Created the registry entries"
 #-----------------------------------------------
 
 # Prepare redirect URI
-$redirectUri = "$( $customProtocol )://www.apteco.de" # The www.apteco.de is only there for cleverreach, otherwise the url would be invalid and not accepted
+$redirectUri = "$( $customProtocol )://localhost" # The www.apteco.de is only there for cleverreach, otherwise the url would be invalid and not accepted
 
 # STEP 1: Prepare the first call to let the user log into cleverreach
 # SOURCE: https://powershellmagazine.com/2019/06/14/pstip-a-better-way-to-generate-http-query-strings-in-powershell/

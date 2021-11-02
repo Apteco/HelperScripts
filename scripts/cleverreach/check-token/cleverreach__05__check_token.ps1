@@ -277,3 +277,5 @@ $return = [Hashtable]@{
 
 # return the results
 $return
+
+exit 0
