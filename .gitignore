@@ -12,3 +12,8 @@ _archive
 _dev
 *.7z
 *.token
+*.dll
+*.nupkg
+*lib*
+*.parquet
+*.db
