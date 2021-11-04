@@ -17,3 +17,7 @@
 If the event should be able to access the surrounding environment with functions, variables etc. you need to call the script like `. ./filewatcher__register.ps1`
 
 Otherwise when calling it like `./filewatcher__register` the task can only access itself and the messagedata
+
+# Call the script
+
+`xxx@localhost:~/# pwsh 10__register_watchdog_and_process.ps1`

@@ -22,8 +22,6 @@ $configMode = $true
 
 <#
 
-https://ws.agnitas.de/2.0/emmservices.wsdl
-https://emm.agnitas.de/manual/de/pdf/webservice_pdf_de.pdf
 
 #>
 
