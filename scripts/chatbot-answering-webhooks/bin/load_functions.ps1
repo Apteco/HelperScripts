@@ -28,7 +28,7 @@ If ( $configMode -and -not $settings) {
 
 }
 
-Add-Type -AssemblyName System.Data #, System.Web  #, System.Text.Encoding
+Add-Type -AssemblyName System.Data, System.Web #, System.Web  #, System.Text.Encoding
 #Add-Type -AssemblyName System.Security
 
 
@@ -74,7 +74,7 @@ function Insert-Data {
                     $row = $_
                     $colNames | ForEach {
                         $colName = $_
-                        Write-Host ":$( $colName )"
+                        #Write-Host ":$( $colName )"
                         $sqliteInsertCommand.Parameters[":$( $colName )"].Value = $row.$colName
                     }
                     $inserts += $sqliteInsertCommand.ExecuteNonQuery()
@@ -115,7 +115,8 @@ function Insert-Data {
 function Update-Data {
     [CmdletBinding()]
     param (
-         [Parameter(Mandatory=$true)][System.Collections.ArrayList] $data
+         [Parameter(Mandatory=$true)][System.Data.SQLite.SQLiteCommand] $command
+        ,[Parameter(Mandatory=$true)][System.Collections.ArrayList] $data         
         #,[Parameter(Mandatory=$true)][System.Collections.ArrayList] $data
 
     )
@@ -147,14 +148,19 @@ function Update-Data {
                 # Insert the data
                 $data | ForEach {
                     $row = $_
-                    $sqliteUpdateFields | ForEach {
-                        $colName = $_
-                        Write-Host ":$( $colName )"
-                        $sqliteUpdateCommand.Parameters[":$( $colName )"].Value = $row.$colName
+                    Write-Host "Doing row"
+                    #Write-Host $command.Parameters
+                    $command.Parameters.GetEnumerator() | ForEach {
+                        Write-Host $_.ParameterName
+                        $parameterName = $_.ParameterName
+                        $colName = $parameterName.substring(1)                        
+                        Write-Host "Colname: $( $colName ) | Parametername: $( $parameterName ) | Value: $( $row.$colName )"
+                        $command.Parameters[$parameterName].Value = $row.$colName
                     }
                     Write-Host "Prepared command"
-                    $updates += $sqliteUpdateCommand.ExecuteNonQuery()
-                    $sqliteUpdateCommand.Reset()
+                    #Write-Host $sqliteUpdateCommand.CommandText 
+                    $updates += $command.ExecuteNonQuery()
+                    $command.Reset()
                 }
 
             } catch {
@@ -186,3 +192,4 @@ function Update-Data {
 
     }
 }
+

@@ -24,6 +24,8 @@ $debug = $true
 
 <#
 
+https://sdcsupport.syniverse.com/hc/en-us/articles/360012065193-Syniverse-WhatsApp-Business-API-Channel-Messaging-Rules
+https://sdcdocumentation.syniverse.com/index.php/omni-channel/user-guides/whatsapp-business-api-guide
 
 #>
 
@@ -102,7 +104,7 @@ try {
     ################################################
 
     #-----------------------------------------------
-    # PREPARE CONNECTION
+    # GENERAL SQLITE SETTINGS
     #-----------------------------------------------
 
     # Journal Mode = MEMORY can cause data loss as everything is written into memory instead of the disk
@@ -110,13 +112,53 @@ try {
     # Cache size is -2000 as default
     $additionalParameters = "Journal Mode=MEMORY;Cache Size=-4000;Page Size=4096;"
 
+    $retries = 10
+    $secondsDelay = 2
+
+
+    #-----------------------------------------------
+    # PREPARE CONNECTION FOR PERSONALISATION
+    #-----------------------------------------------
+
+    Write-Log -message "Establishing connection to personalisation datastore '$( $settings.datastore )'"
+
+    $retrycount = 0
+    $completed = $false
+    while (-not $completed) {
+        try {
+            $datastoreConnection = sqlite-Open-Connection -sqliteFile "$( $settings.datastore )" -new -additionalParameters $additionalParameters
+            Write-Log -message "Connection succeeded."
+            $completed = $true
+        } catch [System.Management.Automation.MethodInvocationException] {
+            if ($retrycount -ge $retries) {
+                Write-Log -message "Connection failed the maximum number of $( $retries ) times." -severity ([LogSeverity]::ERROR)
+                throw $_.exception
+            } else {
+                Write-Log -message "Connection failed $( $retrycount ) times. Retrying in $( $secondsDelay ) seconds." -severity ([LogSeverity]::WARNING)
+                Start-Sleep -Seconds $secondsDelay
+                $retrycount++
+            }
+        }
+    }
+
+    # Setting some pragmas for the connection
+    $datastorePragmaCommand = $datastoreConnection.CreateCommand()
+
+    # With an unplanned event this can cause data loss, but in this case the database is not persistent, so good to go
+    # Good explanation here: https://stackoverflow.com/questions/1711631/improve-insert-per-second-performance-of-sqlite
+    $datastorePragmaCommand.CommandText = "PRAGMA synchronous = OFF"
+    [void]$datastorePragmaCommand.ExecuteNonQuery()
+    Write-Log -message "Setting the pragma '$( $datastorePragmaCommand.CommandText )'"
+
+
+    #-----------------------------------------------
+    # PREPARE CONNECTION FOR BOT CACHE
+    #-----------------------------------------------
+
     Write-Log -message "Establishing connection to cache database '$( $settings.sqliteDB )'"
 
-    $retries = 10
     $retrycount = 0
-    $secondsDelay = 2
     $completed = $false
-
     while (-not $completed) {
         try {
             #$sqliteConnection = sqlite-Open-Connection -sqliteFile ":memory:" -new
@@ -149,7 +191,7 @@ try {
     # DUMMY DATA FIRST
     #-----------------------------------------------
 
-    $tablename = "input"
+    $tablename = "queue"
 
     # Example template for database insert preparation
     $arr = [System.Collections.ArrayList]@(
@@ -160,8 +202,14 @@ try {
             "senderid"   = "gd6OXXXXXXXXXXXXXXXXXX" # $eventValues.sender_id_id
             "timestamp"  = "2021-11-02T17:33:56.656Z" # $eventData.event.timestamp
             "eventid"    = "8a0aNb97TnmPmgOYPVY-RQ" # $eventData."event-id"
+            "inserted"  = "2021-11-02T17:33:56.656Z" # timestamp, when the data was inserted into this database
             "response_text" = ""    # placeholder for the algorithm to fill out the data
             "response_media" = ""   # comma separated list of urls to be send as rich media
+            "response_tags" = ""    # The category of the response, e.g. if it is a question
+            "response_calculated" = ""  # timestamp when the response calculation was finished            
+            "next_questions" = ""   # A json object for the next few questions
+            "syniverse_response_id" = ""    # The message id that was given by syniverse
+            "syniverse_response_timestamp" = ""     # The timestamp when the message id was sent back by syniverse
         }
     )
 
@@ -171,6 +219,21 @@ try {
             "set" = [PSCustomObject]@{
                 "response_text" = "Hello World"    # placeholder for the algorithm to fill out the data
                 "response_media" = ""   # comma separated list of urls to be send as rich media
+                "response_tags" = ""    # comma separated list of tags
+                "response_calculated" = "" # timestamp when the response calculation was finished         
+            }
+            "where" = [PSCustomObject]@{
+                "eventid"    = "8a0aNb97TnmPmgOYPVY-RQ" # $eventData."event-id"
+            }
+        }
+    )
+
+    # Example template for database update preparation
+    $arr3 = [System.Collections.ArrayList]@(
+        [PSCustomObject]@{
+            "set" = [PSCustomObject]@{
+                "syniverse_response_id" = "8a0aNb97TnmPmgOYPVY"    # The message id that was given by syniverse
+                "syniverse_response_timestamp" = "2021-11-02T17:33:56.656Z"   # The timestamp when the message id was sent back by syniverse
             }
             "where" = [PSCustomObject]@{
                 "eventid"    = "8a0aNb97TnmPmgOYPVY-RQ" # $eventData."event-id"
@@ -187,7 +250,7 @@ try {
     $sqliteInsertCommand = $sqliteConnection.CreateCommand()
     $sqliteCreateFields = [System.Collections.ArrayList]@()
     $colNames = [System.Collections.ArrayList]@()
-    $arr | Get-Member -MemberType NoteProperty | ForEach {
+    $arr[0].PSObject.Properties | where { $_.MemberType -eq "NoteProperty" } | ForEach { # Using PSObject.properties instead of get-member -membertype noteproperty to use the order of the object properties
         
         $columnName = $_.Name
 
@@ -273,11 +336,54 @@ try {
 
 
     #-----------------------------------------------
+    # CREATE UPDATE 2 COMMAND AND DEFINE UPDATE AND WHERE COLUMNS
+    #-----------------------------------------------
+
+    # Create database input parameters for INSERT statement
+    $sqliteUpdateCommandTwo = $sqliteConnection.CreateCommand()
+    $updateSetColNamesTwo = [System.Collections.ArrayList]@( ( $arr3.set | Get-Member -MemberType NoteProperty ).Name )
+    $updateWhereColNamesTwo = [System.Collections.ArrayList]@( ( $arr3.where | Get-Member -MemberType NoteProperty ).Name )
+    $sqliteUpdateFieldsTwo = $updateSetColNamesTwo + $updateWhereColNamesTwo
+
+    $sqliteUpdateFieldsTwo | ForEach {
+        
+        $columnName = $_
+
+        $sqliteParameterObject = $sqliteUpdateCommandTwo.CreateParameter()
+        $sqliteParameterObject.ParameterName = ":$( $columnName )"
+        [void]$sqliteUpdateCommandTwo.Parameters.Add($sqliteParameterObject)
+
+    }
+
+
+    #-----------------------------------------------
+    # PREPARE UPDATE STATEMENT
+    #-----------------------------------------------
+
+    $setColumnsTwo = [System.Collections.ArrayList]@()
+    $whereColumnsTwo = [System.Collections.ArrayList]@()
+    $updateSetColNamesTwo | ForEach {
+        $colName = $_
+        $colParam = $sqliteUpdateCommandTwo.Parameters[":$( $colName )"]
+        [void]$setColumnsTwo.Add("""$( $colName )"" = $( $colParam.ParameterName )")
+    }
+    $updateWhereColNamesTwo | ForEach {
+        $colName = $_
+        $colParam = $sqliteUpdateCommandTwo.Parameters[":$( $colName )"]
+        [void]$whereColumnsTwo.Add("""$( $colName )"" = $( $colParam.ParameterName )")
+    }
+
+    $sqliteUpdateCommandTwo.CommandText = "UPDATE ""$( $tablename )"" SET $( $setColumnsTwo -join ', ' ) WHERE $( $whereColumnsTwo -join ' AND ' )"
+
+
+    #-----------------------------------------------
     # LOGGING STATEMENTS
     #-----------------------------------------------
 
     Write-Log -message "Using insert command '$( $sqliteInsertCommand.CommandText )'"
     Write-Log -message "Using update command '$( $sqliteUpdateCommand.CommandText )'"
+    Write-Log -message "Using update2 command '$( $sqliteUpdateCommandTwo.CommandText )'"
+
 
 
     ################################################
@@ -353,6 +459,7 @@ try {
     # if ( $settings.sqliteDb -like "*:memory:*"  ) { 
     #     Write-Log -message "Closing connection to cache"
     $sqliteConnection.Dispose()
+    $datastoreConnection.Dispose()
     # } else {
     #     Write-Log -message "Keeping the database open"
     # }
