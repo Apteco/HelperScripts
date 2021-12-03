@@ -60,7 +60,7 @@ $timestamp = [datetime]::Now
 
 $settings = @{
 
-    # DB shrinking
+    # DB settings
     instances = @( "777D0B7" )
     dbExclude = @( "master","model","msdb","tempdb" )
     ownerExclude = @( "sa" )
