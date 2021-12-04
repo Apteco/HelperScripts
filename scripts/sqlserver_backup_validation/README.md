@@ -2,6 +2,15 @@
 
 After doing a backup from the apteco databases in MS SQLServer and importing that backup to another SQLServer the faststats_service user won't work out of the box. So this script will make sure it will recreate the user and schema in this database
 
+Before using this process, make sure you tried the following on each restored database
+
+```SQL
+EXEC sp_change_users_login 'Report'
+-- If an entry appears, execute this one
+EXEC sp_change_users_login 'Auto_Fix', 'faststats_service'.
+```
+
+
 # Steps
 
 * To use this script, download the whole repository and make sure you are on the sqlserver hosting machine
