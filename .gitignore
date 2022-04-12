@@ -19,3 +19,4 @@ _dev
 *.nupkg
 *lib*
 *.csv
+*.p12
