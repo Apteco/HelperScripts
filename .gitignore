@@ -17,3 +17,4 @@ _dev
 *lib*
 *.parquet
 *.db
+*.csv
