@@ -185,3 +185,33 @@ Function sqlite-Load-Data {
     $data.tables.rows
 
 }
+
+# TODO [ ] Test this new function
+
+# Source: https://stackoverflow.com/questions/11383775/memory-stream-as-db
+# So e.g. you can process data in-memory and then backup an in-memory-database as file
+# Make sure both source and connection are already existing
+Function sqlite-Backup-Database {
+
+    param(   
+        [Parameter(Mandatory=$true)][System.Data.SQLite.SQLiteConnection]$sourceConnection          # 
+       ,[Parameter(Mandatory=$true)][System.Data.SQLite.SQLiteConnection]$destinationConnection     # 
+       ,[Parameter(Mandatory=$false)][switch]$closeDestinationAfterBackup = $false                  # 
+    )
+
+    # Test if the connection is already open
+    <#
+    If (  ) {
+
+    } else {
+        $connection.Open()
+    }
+    #>
+
+    $sourceConnection.BackupDatabase($destinationConnection, "main", "main",-1, null, 0)
+
+    If ( $closeDestinationAfterBackup ) {
+        $destinationConnection.Close()
+    }
+    
+}
