@@ -18,3 +18,4 @@ _dev
 *.db
 *.nupkg
 *lib*
+*.csv
