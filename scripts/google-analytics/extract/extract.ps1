@@ -97,7 +97,7 @@ $headers = [ordered]@{
 
 # TODO [ ] check to load these values from the cert rather than json
 $payload = [ordered]@{
-  "iss" = $j.client_email #"761326798069-r5mljlln1rd4lrbhg75efgigp36m78j5@developer.gserviceaccount.com"
+  "iss" = $j.client_email #"123456789-r5mljlln1rd4lrbhg75efgigp36m78j5@developer.gserviceaccount.com"
   "scope" = $scope
   "aud" = $j.token_uri
   "exp" = ( Get-UnixTime ) + 600 # valid for ten minutes at the moment
@@ -176,9 +176,9 @@ EXIT 0
 <#
 "https://analyticsreporting.googleapis.com"
 
-$key = "&key=AIzaSyDUwaOZgYV1acXDI1fwfAh6UOTqDsE4Ceg"
-$ga4PropertyId = "UA-165573271-1"
-$ga4Website = "217550773"
+$key = "&key=abcdef"
+$ga4PropertyId = "UA-9999999-1"
+$ga4Website = "9999999"
 
 $headers = [Hashtable]@{
     #"Authorization" = "Bearer $( $key )"
