@@ -208,7 +208,7 @@ if ( $password -eq "" -or $null -eq $password) {
 $settings = [Ordered]@{
 
     # Log file settings
-    logfile = $logfile                              # Logfile to use
+    logfile = $settings.logfile                     # Logfile to use
     appendDateToLogfile = $true                     # in this case a date will be appended to the logfile name
     retainXdaysOfLogfiles = 14                      # For how long do you want to retain the logfiles
 
