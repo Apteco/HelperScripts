@@ -31,9 +31,9 @@ $debug = $false
 
 TODO
 
-- [ ] Check certificate expiration
-- [ ] Check orbit api call
-- [ ] Check current nuget version
+- [x] Check certificate expiration
+- [ ] Check orbit api call (also authenticated calls)
+- [x] Check current nuget version
 - [ ] allow proxy calls (copy from Agnitas Code)
 
 #>
@@ -199,7 +199,7 @@ try {
 
     }
 
-#exit 0
+
     #-----------------------------------------------
     # CHECK FREE SPACE
     #-----------------------------------------------
@@ -231,8 +231,11 @@ try {
     }
     
     If ( $settings.attachDriveOverview -eq $true ) {
-        $drivesOverview = Get-PSDrive -PSProvider FileSystem | Format-Table | Out-String
-        [void]$systemInformation.Add( "`n`n$( $drivesOverview )`n`n" )
+        #$drivesOverview = Get-PSDrive -PSProvider FileSystem | Format-Table -AutoSize | Out-String
+        #[void]$systemInformation.Add( "`n`n$( $drivesOverview )`n`n" )
+        $t = Get-PSDrive -PSProvider FileSystem | Select Root, Description, @{name="Used (GB)";expression={ ($_.Used/1GB).ToString(".00") }}, @{name="Free (GB)";expression={ ($_.Free/1GB).ToString(".00") }} | ConvertTo-Html -Fragment -as Table  | Out-String  
+        $str = $t.replace("`r","").replace("`n","")
+        [void]$systemInformation.add( "`n`n<h2>Drive space</h2>`n$( $str )" ) #| Format-List | Out-String
     }
 
 
@@ -251,8 +254,10 @@ try {
     If ( $settings.checkServicesStatus -eq $true ) {
 
         $serviceTable = Get-Service | where { $_.Name -like $settings.servicePrefix -or $_.Name -like $settings.orbitServicePrefix } | Select $settings.serviceAttributes
-        $services = $serviceTable | Format-Table | Out-String  # TODO [ ] add this to the email
-        [void]$systemInformation.Add( "`n`n$( $services )`n`n" )  
+        $services = $serviceTable | ConvertTo-Html -Fragment -as Table | Out-String  #| Format-Table -AutoSize | Out-String  # TODO [ ] add this to the email
+        
+        $str = $services.replace("`r","").replace("`n","")
+        [void]$systemInformation.add( "`n`n<h2>Windows services</h2>`n$( $str )" ) #| Format-List | Out-String
 
     }
 
@@ -289,14 +294,15 @@ try {
             [void]$certs.add( $cert )
 
             $expiresIn = New-TimeSpan -Start ([datetime]::Now) -end $cert.Expiration
-            If ( $settings.warningIfCertificateExpiresInNDays -le $expiresIn.TotalDays ) {
+            If ( $expiresIn.TotalDays -le $settings.warningIfCertificateExpiresInNDays ) {
                 [void]$warningEntries.Add("$( $timestamp.ToString("dd.MM.yyyy HH:mm:ss") ) - CERTIFICATE $( $uri ): Expires in '$( $expiresIn.TotalDays )' days")
             }
 
 
         }
 
-        [void]$systemInformation.add( "`n`n$( $certs | ft | Out-String )`n`n" )
+        $str = ($certs | ConvertTo-Html -Fragment -as List | Out-String  ).replace("`r","").replace("`n","")
+        [void]$systemInformation.add( "`n`n<h2>SSL Certificates</h2>`n$( $str )" ) #| Format-List | Out-String
 
     }
 
@@ -305,6 +311,25 @@ try {
     #-----------------------------------------------
 
     # TODO [ ] implement this -> see AptecoCustomChannels for MSSQL (native), SQLITE and Postgres (Klicktipp)
+
+    #-----------------------------------------------
+    # CHECK ORBIT UPDATER SETTINGS
+    #-----------------------------------------------
+
+    If ( $settings.checkOrbitAutomaticUpdate -eq $true ) {
+
+        $orbitUpdaterSettingsRaw = Get-Content -Path $settings.orbitUpdaterConfig -encoding utf8 -Raw
+        $orbitUpdaterSettings = [xml]$orbitUpdaterSettingsRaw
+    
+        $orbitUpdaterList = [PSCustomObject]@{}
+        $orbitUpdaterSettings.configuration.appSettings.add | where { $_.key -like "Update*" } | ForEach {
+            $orbitUpdaterList | Add-Member -MemberType NoteProperty -Name $_.key -Value $_.value
+        }
+        
+        $str = ($orbitUpdaterList | ConvertTo-Html -Fragment -as List | Out-String ).replace("`r","").replace("`n","")
+        [void]$systemInformation.Add( "`n`n<h2>Orbit Updater Settings</h2>`n$( $str )" )
+
+    }
 
 
     #-----------------------------------------------
@@ -331,9 +356,11 @@ try {
 
         # Check NuGet repository
         $nugetVersions = Find-Package -Source $settings.nugetRepository
-
-        [void]$systemInformation.add( "`n`nOrbitAPI: $( $orbitApiVersion.version )" )
-        [void]$systemInformation.add( "`nOrbitUI: $( $orbitUIVersion.version )" )
+        
+        # Put together
+        [void]$systemInformation.Add( "`n`n<h2>Orbit Versions</h2>" )
+        [void]$systemInformation.add( "`nOrbitAPI: $( $orbitApiVersion.version )" )
+        [void]$systemInformation.add( "OrbitUI: $( $orbitUIVersion.version )" )
         [void]$systemInformation.add( "`nNuget:`n$( $nugetVersions | ForEach { "$( $_.Name ): $( $_.Version )" } | Out-String )`n`n" )
 
     }
@@ -346,9 +373,9 @@ try {
 
     If ( $settings.checkDotNet -eq $true ) {
 
-        $netRuntimes = dotnet --list-runtimes
+        $netRuntimes = dotnet --info #--list-runtimes
 
-        [void]$systemInformation.add( "`n`n$( $netRuntimes | Out-String )`n`n" )
+        [void]$systemInformation.add( "`n<h2>.NET runtimes</h2>`n$( $netRuntimes | Out-String )`n" )
 
     }
 
@@ -482,9 +509,21 @@ try {
         $stopwatch.Stop()
         $cpuMetrics = $cpuLoad | measure -Average -Maximum
 
+        $metrics = [PSCustomObject]@{
+            "CPU avg" = "$( [math]::Round($cpuMetrics.Average,1) ) %"
+            "CPU max" = "$( [math]::Round($cpuMetrics.Maximum,1) ) %"
+            "Measures" = "$( $cpuLoad.Count ) measures over $( $timeout ) seconds"
+        }
+
+        <#
         [void]$systemInformation.Add("CPU avg: $( [math]::Round($cpuMetrics.Average,1) ) %")
         [void]$systemInformation.Add("CPU max: $( [math]::Round($cpuMetrics.Maximum,1) ) %")
         [void]$systemInformation.Add("Resources measures: $( $cpuLoad.Count ) measures over $( $timeout ) seconds")
+        #>
+        $str = ($metrics | ConvertTo-Html -Fragment -as List | Out-String ).replace("`r","").replace("`n","")
+        [void]$systemInformation.Add( "`n<h2>CPU</h2>`n$( $str )`n" )
+
+
     }
 
 
@@ -508,11 +547,25 @@ try {
         $ramMetrics = $freeRAM | measure -Average -Maximum
 
         $os = Get-CimInstance Win32_OperatingSystem
+        $metrics = [PSCustomObject]@{
+            "RAM total size" = "$( [math]::Round($os.TotalVisibleMemorySize / [math]::pow(2,20),2) ) GB"
+            "RAM free avg percentage" = "$( [math]::Round(($ramMetrics.Average/$os.TotalVisibleMemorySize)*100,2) ) %"
+            "RAM free avg" = "$( [math]::Round($ramMetrics.Average / [math]::pow(2,20),2) ) GB"
+            "RAM free max" = "$( [math]::Round($ramMetrics.Maximum / [math]::pow(2,20),2) ) GB"
+            "Measures" = "$( $freeRAM.Count ) measures over $( $timeout ) seconds"
+        }
+
+        $str = ($metrics | ConvertTo-Html -Fragment -as List | Out-String ).replace("`r","").replace("`n","")
+        [void]$systemInformation.Add( "`n<h2>RAM</h2>`n$( $str )`n" )
+
+
+        <#
         [void]$systemInformation.Add("RAM total size: $( [math]::Round($os.TotalVisibleMemorySize / [math]::pow(2,20),2) ) GB")
         [void]$systemInformation.Add("RAM free avg percentage: $( [math]::Round(($ramMetrics.Average/$os.TotalVisibleMemorySize)*100,2) ) %")
         [void]$systemInformation.Add("RAM free avg: $( [math]::Round($ramMetrics.Average / [math]::pow(2,20),2) ) GB")
         [void]$systemInformation.Add("RAM free max: $( [math]::Round($ramMetrics.Maximum / [math]::pow(2,20),2) ) GB")
         [void]$systemInformation.Add("Resources measures: $( $freeRAM.Count ) measures over $( $timeout ) seconds")
+        #>
     }
 
 
@@ -523,19 +576,23 @@ try {
     # Ask for the system information
     If ( @( $settings.attachComputerInfo ).Count -gt 0 ) {
 
-        $computerInfo = Get-ComputerInfo
+        $computerInfo = Get-ComputerInfo | Select $settings.attachComputerInfo
 
+        <#
         $settings.attachComputerInfo | ForEach {
             $attr = $_
             [void]$systemInformation.Add( "$( $attr ): $( [String]$computerInfo.$attr )" )
         }
-
+        #>
+        $str = ($computerInfo | ConvertTo-Html -Fragment -as List | Out-String ).replace("`r","").replace("`n","")
+        [void]$systemInformation.Add( "`n<h2>ComputerInfo</h2>`n$( $str )`n" )
+        
     }
 
     # Merge everything to one string
     $systemInformationString = ""
     If ( $systemInformation.Count -gt 0 ) {
-        $systemInformationString = "`n`n------------`n`nSystem information:`n`n$( $systemInformation -join "`n" )"
+        $systemInformationString = "`n`n------------`n`n<h1>System information:</h1>`n$( $systemInformation -join "`n" )"
     }
 
 
@@ -545,7 +602,7 @@ try {
 
     # Check daily keepalive
     $sendDaily = $false
-    If ( $settings.dailyKeepAlive ) {
+    If ( $settings.dailyKeepAlive -eq $true ) {
 
         $todayKeepAlive = [datetime]::Parse($settings.dailyKeepAliveTime) #($settings.dailyKeepAliveTime)
 
@@ -557,8 +614,9 @@ try {
             # Check we haven't already sent this
             If ( $lastSession -ne $null ) {
                 # Check if lastsession was before the wished time slot
-                $lastSessionToKeepAliveTimespan = New-TimeSpan -Start $lastSession -End $todayKeepAlive
-                If ( $lastSessionToKeepAliveTimespan.TotalMinutes -gt 0 ) {
+                #$lastSessionDateTime = Get-DateTimeFromUnixtime -unixtime $lastSession.lastSession -convertToLocalTimezone
+                $lastSessionToKeepAliveTimespan = New-TimeSpan -Start $todayKeepAlive -End $lastSessionTime
+                If ( $lastSessionToKeepAliveTimespan.TotalMinutes -le 0 ) {
                     # Send it
                     $sendDaily = $true
                 }
@@ -585,6 +643,10 @@ try {
 
         If ( $warningEntries.Count -gt 0 ) {
 
+            $bodyContent = "<h1>Please check those warnings</h1>`n`n$( $warningEntries -join "`n" )$( $systemInformationString )</span>" -replace "`n","<br/>"
+            $bodyHTML = "$( $mailStyle )<span style='font-family:courier, courier new, serif;font-size:12pt;font-style:none;'>$( $bodyContent )</span>"
+            #$bodyHTML | Set-content "c:\temp\abc.html"
+
             # combine all parameters
             $mailParams = [Hashtable]@{
                 SmtpServer = $settings.smtpSettings.host
@@ -592,7 +654,7 @@ try {
                 To = @( $settings.smtpSettings.to )
                 Port = $settings.smtpSettings.port
                 Subject = "$( $settings.subjectprefix )Please check these $( $warningEntries.Count ) warnings"
-                Body = "<span style='font-family:courier, courier new, serif;font-size:12pt;font-style:none;'>Please check those warnings`n`n$( $warningEntries -join "`n" )$( $systemInformationString )</span>"
+                Body = $bodyHTML #"<span style='font-family:courier, courier new, serif;font-size:12pt;font-style:none;'>Please check those warnings`n`n$( $warningEntries -join "`n" )$( $systemInformationString )</span>"
                 BodyAsHtml = $true
             }
 
@@ -606,7 +668,10 @@ try {
             } else {
                 # Do nothing
             }
-    
+            
+            # Log
+            Write-Log -message "Sending direct email"
+
             # call the sending with splatting
             Send-MailMessage @mailParams
     
@@ -641,18 +706,22 @@ try {
     [void]$warningsToday.AddRange($warningEntries)
 
     # LOG
-    Write-Log -message "Collected $( $warningEntries.Count ) warnings" -severity ( [Logseverity]::WARNING )
+    If ( $warningEntries.Count -gt 0 ) {
+        Write-Log -message "Collected $( $warningEntries.Count ) warnings" -severity ( [Logseverity]::WARNING )
+    } else {
+        Write-Log -message "No warnings found" -severity ( [Logseverity]::INFO )
+    }
     
 
     #-----------------------------------------------
-    # SEND DAILY MAIL
+    # SEND DAILY SUMMARY MAIL
     #-----------------------------------------------
     
     If ( $sendDaily -eq $true ) {
-
    
         # TODO [ ] Now it only sends the warnings of today, but maybe think about sending the warnings since the last warning summary mail
-
+        $bodyContent = "Please check those warnings`n`n$( $warningsToday -join "`n" )$( $systemInformationString )</span>" -replace "`n","<br/>"
+        $bodyHTML = "$( $mailStyle )<span style='font-family:courier, courier new, serif;font-size:12pt;font-style:none;'>$( $bodyContent )</span>"
 
         # combine all parameters
         $mailParams = [Hashtable]@{
@@ -661,7 +730,7 @@ try {
             To = @( $settings.smtpSettings.to )
             Port = $settings.smtpSettings.port
             Subject = "$( $settings.subjectprefix )Please check $( $warningsToday.Count ) warnings of today"
-            Body = "<span style='font-family:courier, courier new, serif;font-size:12pt;font-style:none;'>Please check those warnings`n`n$( $warningEntries -join "`n" )$( $systemInformationString )</span>"
+            Body = $bodyHTML #"<span style='font-family:courier, courier new, serif;font-size:12pt;font-style:none;'>Please check those warnings`n`n$( $warningEntries -join "`n" )$( $systemInformationString )</span>"
             BodyAsHtml = $true
         }
 
@@ -676,6 +745,9 @@ try {
             # Do nothing
         }
 
+        # Log
+        Write-Log -message "Sending summary email"
+
         # call the sending with splatting
         Send-MailMessage @mailParams
 
@@ -683,12 +755,30 @@ try {
         $warningsToday.Clear()
 
         # Set this to true now
-        $emailSent = $true        
+        $emailSent = $true    
+        
+        # When we are already at this daily point, do some regular log cleanup
+        If ( $settings.appendDateToLogfile -eq $true ) {
+            $logfileDir = [System.IO.Path]::GetDirectoryName($logfile)
+            $filter = "$( [System.IO.Path]::GetFileNameWithoutExtension($settings.logfile) )*$( [System.IO.Path]::GetExtension($settings.logfile) )*"
+            Get-ChildItem -Path $logfileDir -Filter $filter | ForEach {
+                $logItem = $_
+                $logItemAge = New-TimeSpan -Start $logItem.LastWriteTime -End ( [datetime]::Today )
+                If ( $logItemAge.TotalDays -gt $settings.retainXdaysOfLogfiles ) {
+                    Write-Log "Removing logfile '$( $logItem.FullName )' because it is older than $( $settings.retainXdaysOfLogfiles ) days"
+                    Remove-Item -Path $logItem.FullName -Force
+                }
+            }
+        }
 
     }
 
     If ( $emailSent -eq $true ) {
         $emailTimestamp = Get-Unixtime
+    } elseif ( $lastSession -ne $null ) {
+        $emailTimestamp = $lastSession.emailTimestamp
+    } else {
+        $emailTimestamp = $null
     }
     
 

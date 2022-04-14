@@ -63,7 +63,7 @@ $eventChecks = [hashtable]@{
         If ( $item.PSIsContainer -eq $true ) {
                                         
             $msg = "$( $timestamp.ToString("dd.MM.yyyy HH:mm:ss") ) - You defined 'ZEROSIZE' for '$( $item.FullName )', but this is a folder, not a file. Please choose another warning"
-            Write-log -message  -severity ([LogSeverity]::WARNING)
+            Write-log -message $msg -severity ([LogSeverity]::WARNING)
             [void]$warningEntries.Add($msg)
         
         } else {
@@ -83,12 +83,16 @@ $eventChecks = [hashtable]@{
 
         # Reference to: https://stackoverflow.com/questions/24992681/powershell-check-if-a-file-is-locked
 
+        param(
+            $path
+        )
+
         $item = Get-Item -Path $path
 
         If ( $item.PSIsContainer -eq $true ) {
                                         
             $msg = "$( $timestamp.ToString("dd.MM.yyyy HH:mm:ss") ) - You defined 'LOCKED' for '$( $item.FullName )', but this is a folder, not a file. Please choose another warning"
-            Write-log -message  -severity ([LogSeverity]::WARNING)
+            Write-log -message $msg -severity ([LogSeverity]::WARNING)
             [void]$warningEntries.Add($msg)
         
         } else {
@@ -109,8 +113,8 @@ $eventChecks = [hashtable]@{
             # Create warning
             If ( $locked -eq $true ) {
                                             
-                $msg = "$( $timestamp.ToString("dd.MM.yyyy HH:mm:ss") ) - The file '$( $item.FullName )' is locked."
-                Write-log -message  -severity ([LogSeverity]::WARNING)
+                $msg = "$( $timestamp.ToString("dd.MM.yyyy HH:mm:ss") ) - The item triggered 'LOCKED' for '$( $item.FullName )'"
+                Write-log -message $msg -severity ([LogSeverity]::WARNING)
                 [void]$warningEntries.Add($msg)
             
             } 

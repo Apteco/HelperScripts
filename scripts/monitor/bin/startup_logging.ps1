@@ -2,9 +2,24 @@
 # Log
 $logfile = $settings.logfile
 
+# Checking filename
+$logfileCheck = Test-Path -LiteralPath $logfile -IsValid
+If ( $logfileCheck -eq $true ) {
+    Write-Host "Logfile path is valid"
+}
+
+# adding timestamp in filename if configured
+If ( $settings.appendDateToLogfile -eq $true ) {
+    $datetimeSuffix = [datetime]::Today.toString("yyyyMMdd")
+    $newlogfilename = "$( [System.IO.Path]::GetFileNameWithoutExtension($logfile) )__$( $datetimeSuffix )$( [System.IO.Path]::GetExtension($logfile) )"
+    $logfileDirectory = [System.IO.Path]::GetDirectoryName($logfile)
+    $logfile = [System.IO.Path]::Combine($logfileDirectory,$newlogfilename)
+}
+
 # append a suffix, if in debug mode
 if ( $debug -and -not $configMode) {
-    $logfile = "$( $logfile ).debug"
+    $logfile = [System.IO.Path]::ChangeExtension($logfile,"$( [System.IO.Path]::GetExtension($logfile) ).debug")
+    #$logfile = "$( $logfile ).debug"
 }
 
 # Start the log

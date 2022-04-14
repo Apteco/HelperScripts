@@ -92,7 +92,7 @@ if ( $settingsFile -eq "" -or $null -eq $settingsFile) {
 }
 
 # Check if filename is valid
-if(Test-Path -LiteralPath $settingsFile -IsValid ) {
+if( Test-Path -LiteralPath $settingsFile -IsValid ) {
     Write-Host "SettingsFile '$( $settingsFile )' is valid"
 } else {
     Write-Host "SettingsFile '$( $settingsFile )' contains invalid characters"
@@ -156,7 +156,8 @@ if(Test-Path -LiteralPath $logfile -IsValid ) {
 #-----------------------------------------------
 
 $settings = @{
-    "logfile" = $logfile
+    logfile = $logfile
+    appendDateToLogfile = $true
 }
 
 # Setup the log and do the initial logging e.g. for input parameters
@@ -204,65 +205,87 @@ if ( $password -eq "" -or $null -eq $password) {
 # SETTINGS OBJECT
 #-----------------------------------------------
 
-$settings = [Hashtable]@{
+$settings = [Ordered]@{
+
+    # Log file settings
+    logfile = $logfile                              # Logfile to use
+    appendDateToLogfile = $true                     # in this case a date will be appended to the logfile name
+    retainXdaysOfLogfiles = 14                      # For how long do you want to retain the logfiles
 
     # General settings
-    logfile = $logfile
-    powershellExePath = "powershell.exe"    # Define other powershell path, e.g if you want to use pwsh for powershell7
-    subjectprefix = "[DEMO] "
-    sessionFile = $sessionFile
+    powershellExePath = "powershell.exe"            # Define other powershell path, e.g if you want to use pwsh for powershell7
+    sessionFile = $sessionFile                      # File to save the last session
 
     # Network settings
     #"changeTLS" = $true
     #"proxy" = $proxy # Proxy settings, if needed - will be automatically used
     
-    # check folder
-    attachDriveOverview = $true     # $true|$false attaches a list of drives with free and used gb
-    checkSpace = $true              # $true|$false checks if the free space is already used up
-    thresholdWarning = 0.8
-    thresholdCritical = 0.9
-    onlyOutputWarnings = $false # TODO [ ] implement this one to only show log messages when something is wrong
+    # check space for drives
+    attachDriveOverview = $true                     # $true|$false attaches a list of drives with free and used gb
+    checkSpace = $true                              # $true|$false checks if the free space is already used up
+    thresholdWarning = 0.8                          # Threshold when a warning for used space should be generated
+    thresholdCritical = 0.9                         # Threshold when a critical warning for used space should be generated
+    #onlyOutputWarnings = $false                     # TODO [ ] implement this one to only show log messages when something is wrong
 
     # more settings
-    dailyKeepAlive = $true  # let the script send keep alives, even if there are no warnings to send
-    dailyKeepAliveTime = "23:00:00" # TODO [ ] implement this time
+    dailyKeepAlive = $true                          # $true|$false if you want to receive a keep alive via email every day, even if there are no warnings to send
+    dailyKeepAliveTime = "23:00:00"                 # daily time to send the daily summary
     
     # Attributes of Get-ComputerInfo to attach to the mail, execute this command to find out more
-    attachComputerInfo = @("WindowsProductName", "CsName", "CsNumberOfLogicalProcessors", "CsProcessors", "OsName", "OsUptime")
+    attachComputerInfo = @(
+        "WindowsProductName"
+        "CsName"
+        "CsNumberOfLogicalProcessors"
+        "CsProcessors"
+        "OsName"
+        "OsUptime"
+    )
 
     # Measure CPU and RAM over a specific period
-    measureCPU = $true  # $true|$false
-    measureRAM = $true  # $true|$false
+    measureCPU = $true                              # $true|$false if you want to measure CPU over 10 seconds and to see the average use
+    measureRAM = $true                              # $true|$false if you want to measure RAM over 10 seconds and to see the average use
 
     # Services
-    checkServicesStatus = $true
-    servicePrefix = "fs_*"
-    orbitServicePrefix = "FastStats*"
-    serviceAttributes = @( "DisplayName", "Name", "UserName", "Status", "StartupType" ) # Find out more with  Get-Service -Name "A*" | Select *
+    checkServicesStatus = $true                     # $true|false if you want to check the current service status
+    servicePrefix = "fs_*"                          # Prefix for the FastStats services
+    orbitServicePrefix = "FastStats*"               # Prefix for the Orbit Updater services
+    serviceAttributes = @(                          # Services attributes to attach in the email, find out more with  Get-Service -Name "A*" | Select *, "UserName", "StartupType"
+        "Status"
+        "Name"
+        "DisplayName"
+    ) 
 
     # certificates
-    checkCertificates = $true
-    certificateURLsToCheck = @("demo.apteco.io") # Array, that can be extended
-    warningIfCertificateExpiresInNDays = 14 # Number of days when the warnings should be generated
+    checkCertificates = $true                       # $true|false if you want to check SSL certificates
+    certificateURLsToCheck = @(                     # Array with hostnames to check the certificates
+        "demo.apteco.io"
+    ) 
+    warningIfCertificateExpiresInNDays = 14         # Number of days when the warnings should be generated
 
+    # Check the Orbit Update settings
+    checkOrbitAutomaticUpdate = $true               # $true|false if you want to check if the automatic update of orbit is activated
+    orbitUpdaterConfig = "C:\Program Files (x86)\Apteco\FastStats Orbit Updater\Updater.exe.config" # The path to the updater config file
+    
     # OrbitUrls version check
-    checkOrbitVersions = $true
-    orbitApiUrl = "https://demo.apteco.io/OrbitAPI"
-    orbitUiUrl = "https://demo.apteco.io/Orbit"
-    nugetRepository = "https://orbit.apteco.com/FastStatsOrbitUpdateServer/nuget"
+    checkOrbitVersions = $true                      # $true|false if you want to check the orbit versions
+    orbitApiUrl = "https://demo.apteco.io/OrbitAPI" # The Orbit API url of your Orbit installation
+    orbitUiUrl = "https://demo.apteco.io/Orbit"     # The Orbit UI url of your Orbit installation
+    nugetRepository = "https://orbit.apteco.com/FastStatsOrbitUpdateServer/nuget"   # Normally no need to change as this is the public repository
 
     # .NET
-    checkDotNet = $true
+    checkDotNet = $true                             # $true|false if you want to check .NET
 
-    # smtp settings
+    # email/smtp settings
+    subjectprefix = "[DEMO] "                       # Prefix to use for the email subject
     smtpSettings = [Hashtable]@{
-        username = $username
-        password = $passwordEncrypted
-        host = "smtp.ionos.de"
-        from = "orbit@demo.apteco.io"
-        to = @("florian.von.bracht@apteco.de")
-        port = 587 #25
-
+        username = $username                        # Will be asked interactive when running this script
+        password = $passwordEncrypted               # Will be asked interactive when running this script
+        host = "smtp.ionos.de"                      # SMTP server name
+        from = "orbit@demo.apteco.io"               # SMTP username
+        port = 587                                  # SMTP Port
+        to = @(                                     # receivers for notification mails
+            "florian.von.bracht@apteco.de"
+        )
     }
 
     
@@ -320,10 +343,10 @@ $json | Set-Content -path $settingsFile -Encoding UTF8
 #
 ################################################
 
- # Confirm you read the licence details
- $createTask = $Host.UI.PromptForChoice("Confirmation", "Do you want to create a scheduled task?", @('&Yes'; '&No'), 0)
+# Confirm you read the licence details
+$createTask = $Host.UI.PromptForChoice("Confirmation", "Do you want to create a scheduled task?", @('&Yes'; '&No'), 0)
 
- If ( $createTask -eq "0" ) {
+If ( $createTask -eq "0" ) {
 
     # Means yes and proceed
     
@@ -335,8 +358,10 @@ $json | Set-Content -path $settingsFile -Encoding UTF8
     $taskPath = "Apteco"
     $taskNameDefault = "Apteco Monitor"
     $taskDescription = "Monitors or checks some things"
-    $executionUser = "$( $env:USERDOMAIN )\$( $env:USERNAME )" # "LOCALSERVICE"
+    #$executionUser = "$( $env:USERDOMAIN )\$( $env:USERNAME )" # "LOCALSERVICE"
     $execFile = Get-Item -Path ".\mntr__10__monitor.ps1"
+
+    Write-Log -message "Creating a scheduled task with name '$( $taskNameDefault )' and Path '$( $taskPath )'"
 
     # Replace task if it already exists
     $existingTask = @( Get-ScheduledTask | where { $_.TaskName -like "$( $taskNameDefault )*" } )
@@ -350,6 +375,7 @@ $json | Set-Content -path $settingsFile -Encoding UTF8
             # To replace the tasks, remove them
             $existingTask | ForEach {
                 $exTask = $_
+                Write-Log -message "Removing task first with '$( $exTask.TaskName )' to get it replaced"
                 Unregister-ScheduledTask -TaskName $exTask.TaskName -Confirm:$false
             }
 
@@ -445,13 +471,15 @@ $json | Set-Content -path $settingsFile -Encoding UTF8
         User = $taskCred.UserName                               # Only username will be interactive mode; username+password is non-interactive mode
         Password = $taskCred.GetNetworkCredential().Password    # Just input password to let this be executed independent from the current session
     }
-    #$error.Clear()
+
+    Write-Log "Register the task now"
+
     try {
         $newTask = Register-ScheduledTask @taskParams -ErrorAction Stop  #T1 -InputObject $task
         $task = $newTask #Get-ScheduledTask | where { $_.TaskName -eq $taskName }
         $taskInfo = $task | Get-ScheduledTaskInfo
     } catch [Microsoft.Management.Infrastructure.CimException] { #[Microsoft.Management.Infrastructure.CimException]
-        Write-Log -message "Registerung the task failed." -severity ([Logseverity]::ERROR)
+        Write-Log -message "Registering the task failed." -severity ([Logseverity]::ERROR)
         Write-Log -message "Task Scheduler cannot create the task. The user account is unknown, the password is incorrect, or the user account does not have permission to create this task." -severity ([Logseverity]::ERROR)
         $registerTaskFailed = $true
         #throw $_.Exception
@@ -525,17 +553,7 @@ $json | Set-Content -path $settingsFile -Encoding UTF8
     Write-Log -message "  Next run date is '$( $taskInfo.NextRunTime )'"
     # The task will only be created if valid. Make sure it was created successfully
 
-} 
-
-<#
-$ht = [Hashtable]@{
-    one=$taskparams
-    two="2"
 }
-
-$j = Start-Job -ScriptBlock { $a = $args.one; $t = Register-ScheduledTask @a; return $true } -Credential $taskCred -ArgumentList $ht
-Receive-Job -Id $job.id -Keep
-#>
 
 
 ################################################
@@ -543,6 +561,8 @@ Receive-Job -Id $job.id -Keep
 # WAIT FOR KEY
 #
 ################################################
+
+Write-Log -message "Settings creation finished :-)"
 
 Write-Host -NoNewLine 'Press any key to continue...';
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
