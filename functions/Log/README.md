@@ -36,9 +36,11 @@ The process id is good for parallel calls/processes so you know they belong toge
 
 # Installation
 
-You can just download the whole repository here and pick this script or your can use PSGallery through PowerShell commands directly like
+You can just download the whole repository here and pick this script or your can use PSGallery through PowerShell commands directly.
 
-this for all users scope
+## PSGallery
+
+For installation execute this for all users scope
 
 ```PowerShell
 Install-Script -Name WriteLogfile
@@ -56,17 +58,64 @@ The last option installs the script in a folder like `C:\Users\Florian\Documents
 Get-InstalledScript WriteLogFile
 ```
 
+or
+
+```PowerShell
+Get-Command WriteLogFile
+```
+
 If you want to find more [Apteco scripts in PSGallery](https://www.powershellgallery.com/packages?q=Tags%3A%22Apteco%22), please search with
 
 ```PowerShell
 Find-Script -Repository "PSGallery" -Tag "Apteco"
 ```
 
+## Github
+
+[Download the whole repository](https://github.com/Apteco/HelperScripts/archive/refs/heads/master.zip) and pick the `log.ps1` file and put it wherever you want in your project.
+
+To load the script, dot source it like
+
+```PowerShell
+. .\log.ps1
+```
+
+or
+
+```PowerShell
+. .\functions\log.ps1
+```
+
+or wherever you organise your scripts. If you put it in a folder that is automatically loaded through the `PATH` Environment variable you can find the script in a list via 
+
+```PowerShell
+Get-Command -CommandType ExternalScript
+```
+
+or dot source (load) it directly
+
+```PowerShell
+Get-Command -Name "WriteLogfile" | % { . $_.Source }
+```
+
+See Usage for more information about loading this script.
+
+
 # Usage
 
-The script should be loaded automatically when you opening your PowerShell session. If your `PATH` variable was changed during the installation of your first script from PSGallery, please restart your machine to enforce the reload of the `PATH` environment variable.
+As the script contains multiple functions you should dot source (load, but not execute) it when you want to use it in your current session/scope. To load the code of this script, just execute this command
 
-You should be able to use the script directly like, but please have a look at more hints at the top of this documentation.
+```PowerShell
+Get-Command -Name "WriteLogfile" | % { . $_.Source }
+```
+
+If you want to load multiple scripts, you can define the names in a string array like
+
+```PowerShell
+Get-Command -Name "WriteLogfile","HelloWorld" | % { . $_.Source }
+```
+
+You should be able to use the script directly with a command like `Write-Log "Hello World"`, but please have a look at more hints at the top of this documentation.
 
 ## Example 1
 
