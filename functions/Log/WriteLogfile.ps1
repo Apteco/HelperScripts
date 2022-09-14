@@ -1,6 +1,6 @@
 <#PSScriptInfo
 
-.VERSION 0.9.01
+.VERSION 0.9.02
 
 .GUID eeb42bfc-facd-4f60-8108-9eed67a115e9
 
@@ -25,7 +25,8 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Initial release of logging module through psgallery
+0.9.02 Updated description
+0.9.01 Initial release of logging module through psgallery
 
 .PRIVATEDATA
 
@@ -36,6 +37,12 @@ Initial release of logging module through psgallery
 .DESCRIPTION
 Apteco Customs - PowerShell logging script
 
+Execute commands like
+
+Write-Log -message "Hello World"
+Write-Log -message "Hello World" -severity ([LogSeverity]::ERROR)
+"Hello World" | Write-Log
+
 The logfile getting written looks like
 
 20210217134552	a6f3eda5-1b50-4841-861e-010174784e8c	INFO	Hello World
@@ -43,7 +50,7 @@ The logfile getting written looks like
 
 separated by tabs.
 
-Make sure, the variables $logfile and $processId are present before calling this. Otherwise they will be created automatically.
+Make sure, the variables $logfile and $processId are present before calling this. Otherwise they will be created automatically and you are notified about the location and the current process id
 The variables could be filled like
 
 $logfile = ".\test.log"
