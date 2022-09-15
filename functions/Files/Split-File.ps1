@@ -1,5 +1,7 @@
 ﻿<#
 
+Please be aware to use utf8 files as input. The output will always be utf8. You can define if your input and output has a bom (byte-order-mark)
+
 Requires the loaded log function from https://github.com/Apteco/HelperScripts/tree/master/functions/Log
 
 Example for creating an initialsessionstate
@@ -57,7 +59,9 @@ Function Split-File {
         ,[Parameter(Mandatory=$false)][bool]$header = $true                 # file has a header?
         ,[Parameter(Mandatory=$false)][bool]$writeHeader = $true            # output the header
         ,[Parameter(Mandatory=$false)][string[]]$outputColumns = @()        # columns to output
-        ,[Parameter(Mandatory=$false)][switch]$outputDoubleQuotes = $true   # output double quotes -> $true is better performance because it needs to be removed by an regex
+        ,[Parameter(Mandatory=$false)][boolean]$outputDoubleQuotes = $true  # output double quotes -> $true is better performance because it needs to be removed by an regex
+        ,[Parameter(Mandatory=$false)][boolean]$inputBOM = $false           # Define if your input file has a BOM (byte order mark)
+        ,[Parameter(Mandatory=$false)][boolean]$outputBOM = $false          # Define if your output file should have a BOM (byte order mark)
         ,[Parameter(Mandatory=$false)][String]$outputFolder = "."           # output root folder 
         ,[Parameter(Mandatory=$false)][System.Collections.ArrayList]$additionalColumns = [System.Collections.ArrayList]@()      # more columns to define via @( @{name="colA";expression={ $_.num + 1 }}, @{name="colB";expression={ 2 + 1 }} )
         ,[Parameter(Mandatory=$false)][initialsessionstate]$initialsessionstate = [initialsessionstate]::CreateDefault()        # allows you to add functions and variables to each runspace pool so they can be shared
@@ -81,18 +85,18 @@ Function Split-File {
         $fileCounter = 0
 
         # import settings
-        $inputEncoding = [System.Text.Encoding]::UTF8.CodePage
+        #$inputEncoding = [System.Text.Encoding]::UTF8.CodePage
 
         # open file to read
         $input = Get-Item -path $inputPath    
-        $reader = New-Object System.IO.StreamReader($input.FullName, [System.Text.Encoding]::GetEncoding($inputEncoding))
+        $reader = New-Object System.IO.StreamReader($input.FullName, [System.Text.UTF8Encoding]::New($inputBOM)) # using encoding now directly
 
         # export settings
         $exportId = [guid]::NewGuid()
         $exportFolder = New-Item -Path $outputFolder -Name $exportId.Guid -ItemType "directory" # create folder for export
         $exportFilePrefix = "$( $exportFolder.FullName )\$( $input.Name )"
         $append = $true
-        $outputEncoding = [System.Text.Encoding]::UTF8.CodePage
+        #$outputEncoding = [System.Text.Encoding]::UTF8.CodePage
 
         # add extension to file prefix dependent on number of export files
         if ( $writeCount -ne -1 ) {
@@ -353,7 +357,7 @@ Function Split-File {
                 # open file if it should written in once
                 if ( $writeCount -eq -1 ) {
                     Write-Log -message "Open file to write: $( $exportFilePrefix )"
-                    $writer = New-Object System.IO.StreamWriter($exportFilePrefix, $append, [System.Text.Encoding]::GetEncoding($outputEncoding))
+                    $writer = New-Object System.IO.StreamWriter($exportFilePrefix, $append, [System.Text.UTF8Encoding]::New($outputBOM)) #[System.Text.Encoding]::GetEncoding($outputEncoding))
                     if ($writeHeader) {
                         Write-Log -message "Writing header"
                         $writer.WriteLine($headerRowParsed)
@@ -375,7 +379,7 @@ Function Split-File {
                         }
                         $f = "$( $exportFilePrefix )$( $fileCounter )"
                         Write-Log -message "Open file to write: $( $f )"
-                        $writer = New-Object System.IO.StreamWriter($f, $append, [System.Text.Encoding]::GetEncoding($outputEncoding))
+                        $writer = New-Object System.IO.StreamWriter($f, $append, [System.Text.UTF8Encoding]::New($outputBOM))
                         if ($writeHeader) {
                             Write-Log -message "Writing header"
                             $writer.WriteLine($headerRowParsed)
@@ -414,7 +418,7 @@ Function Split-File {
         $reader.Close()
 
         # return value
-        $exportId.Guid 
+        return $exportId.Guid 
 
     }
 
