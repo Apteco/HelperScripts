@@ -381,6 +381,63 @@ try {
 
 
     #-----------------------------------------------
+    # CHECK .NET FRAMEWORK
+    #-----------------------------------------------
+
+    if ( $setting.checkDotNetFrameWork -eq $true ) {
+
+        # https://docs.microsoft.com/de-de/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed
+        $releaseKey = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full").Release
+        Switch ( $releaseKey ) {
+            { $PSItem -ge 528040 } {
+                $dotnetVersion = "4.8 or later"
+                break
+            }
+            { $PSItem -ge 461808 } {
+                $dotnetVersion =  "4.7.2"
+                break
+            }
+            { $PSItem -ge 461308 } {
+                $dotnetVersion =  "4.7.1"
+                break
+            }
+            { $PSItem -ge 460798 } {
+                $dotnetVersion =  "4.7"
+                break
+            }
+            { $PSItem -ge 394802 } {
+                $dotnetVersion =  "4.6.2"
+                break
+            }
+            { $PSItem -ge 394254 } {
+                $dotnetVersion =  "4.6.1"
+                break
+            }
+            { $PSItem -ge 393295 } {
+                $dotnetVersion =  "4.6"
+                break
+            }
+            { $PSItem -ge 379893 } {
+                $dotnetVersion =  "4.5.2"
+                break
+            }
+            { $PSItem -ge 378675 } {
+                $dotnetVersion =  "4.5.1"
+                break
+            }
+            { $PSItem -ge 378389 } {
+                $dotnetVersion =  "4.5"
+                break
+            }           
+        }
+
+        [void]$systemInformation.add( "`n<h2>.NET Framework</h2>`n$( $dotnetVersion | Out-String )`n" )
+
+
+    }
+
+
+    #-----------------------------------------------
     # CHECK MAYBE TOKENS LIKE CLEVERREACH
     #-----------------------------------------------
     # TODO [ ] implement this
