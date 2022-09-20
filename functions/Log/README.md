@@ -40,19 +40,23 @@ You can just download the whole repository here and pick this script or your can
 
 ## PSGallery
 
+### Installation via Install-Script
+
 For installation execute this for all users scope
 
 ```PowerShell
-Install-Script -Name WriteLogfile
+Find-Script -Repository "PSGallery" -Name "WriteLogfile" -IncludeDependencies | Install-Script -Verbose
 ```
 
-or this for the current users scope
+You can then find the script via `Set-Location "$( $env:USERPROFILE )\Documents\WindowsPowerShell\Scripts"`
+
+or this for the current users scope (this includes all dependencies as addition to `Install-Script WriteLogfile`)
 
 ```PowerShell
-Install-Script -Name WriteLogfile -Scope CurrentUser
+Find-Script -Repository "PSGallery" -Name "WriteLogfile" -IncludeDependencies | Install-Script -Scope CurrentUser -Verbose
 ```
 
-The last option installs the script in a folder like `C:\Users\Florian\Documents\WindowsPowerShell\Scripts` but you can also have a look via
+The last option installs the script in a folder like `Set-Location "$( $env:USERPROFILE )\Documents\WindowsPowerShell\Scripts"` but you can also have a look via
 
 ```PowerShell
 Get-InstalledScript WriteLogFile
@@ -69,6 +73,41 @@ If you want to find more [Apteco scripts in PSGallery](https://www.powershellgal
 ```PowerShell
 Find-Script -Repository "PSGallery" -Tag "Apteco"
 ```
+
+### Installation via local Repository
+
+If your machine does not have an online connection you can use another machine to save the script from PSGallery website as a local file via your browser. You should have download a file with an `.nupkg` extension. Please don't forget to download all dependencies, too. You could simply unzip the file(s) and put the script somewhere you need it OR do it in an updatable manner and create a local repository if you don't have it already with
+
+```PowerShell
+Set-Location "$( $env:USERPROFILE )\Downloads"
+New-Item -Name "PSRepo" -ItemType Directory
+Register-PSRepository -Name "LocalRepo" -SourceLocation "$( $env:USERPROFILE )\Downloads\PSRepo"
+Get-PSRepository
+```
+
+Then put your downloaded `.nupkg` file into the new created `PSRepo` folder and you should see the script via 
+
+```PowerShell
+Find-Script -Repository LocalRepo
+```
+
+Then install the script like 
+
+```PowerShell
+Find-Script -Repository LocalRepo -Name WriteLogfile -IncludeDependencies | Install-Script -Scope CurrentUser -Verbose
+```
+
+That way you can exchange the `.nupkg` files and update them manually from time to time.
+
+### Uninstall
+
+If you don't want to use the script anymore, just remove it with 
+
+```PowerShell
+Uninstall-Script -Name WriteLogfile
+```
+
+
 
 ## Github
 
