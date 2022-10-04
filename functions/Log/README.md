@@ -99,6 +99,36 @@ Find-Script -Repository LocalRepo -Name WriteLogfile -IncludeDependencies | Inst
 
 That way you can exchange the `.nupkg` files and update them manually from time to time.
 
+#### Troubleshooting
+
+`WARNING: Unable to download from URI...`
+
+If you are confronted with this message (because of missing internet connection)
+
+![grafik](https://user-images.githubusercontent.com/14135678/193812253-3e2ca672-8d36-4f55-9659-f45ea38ec3f2.png)
+
+Make sure to install the nuget provider in order to create a local repository for nuget packages.
+
+So have a look at the url that is embedded in that message, in our case https://go.microsoft.com/fwlink/?LinkID=627338&clcid=0x409 and copy that to a browser with internet access.
+This should forward you automatically to another url https://onegetcdn.azureedge.net/providers/providers.masterList.feed.swidtag where you can copy 
+
+![grafik](https://user-images.githubusercontent.com/14135678/193815009-8e2200a1-0945-441a-ba29-c8eb430bb2a4.png)
+
+the url https://onegetcdn.azureedge.net/providers/nuget-2.8.5.208.package.swidtag from it and then you are redirected this file
+
+![grafik](https://user-images.githubusercontent.com/14135678/193815153-a7c7b2be-d6e4-43f6-b358-a27d6c205b66.png)
+
+where you get the final link https://onegetcdn.azureedge.net/providers/Microsoft.PackageManagement.NuGetProvider-2.8.5.208.dll for the dll file to download.
+
+Make sure you unblock the dll file
+
+![grafik](https://user-images.githubusercontent.com/14135678/193817768-8a08f553-9490-4e18-ab28-bec849b6865f.png)
+
+and then load it to your machine without internet connection and put it into one of your folders mentioned in the first screenshot like `C:\Program Files\PackageManagement\ProviderAssemblies` or `%LOCALAPPDATA%\PackageManagement\ProviderAssemblies` 
+
+Then proceed with the other steps...
+
+
 ### Uninstall
 
 If you don't want to use the script anymore, just remove it with 
