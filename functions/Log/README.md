@@ -101,6 +101,8 @@ That way you can exchange the `.nupkg` files and update them manually from time 
 
 #### Troubleshooting
 
+##### Unable to download from URI
+
 `WARNING: Unable to download from URI...`
 
 If you are confronted with this message (because of missing internet connection)
@@ -128,6 +130,20 @@ and then load it to your machine without internet connection and put it into one
 
 Then proceed with the other steps...
 
+#### Using the IE proxy settings
+
+Good reference here: https://copdips.com/2018/05/setting-up-powershell-gallery-and-nuget-gallery-for-powershell.html
+
+Execute this command first to use the local IE proxy settings
+
+```PowerShell
+(New-Object -TypeName System.Net.WebClient).Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+```
+and maybe add these command to your profile to execute it with every new PowerShell process. You can find your profiles here:
+
+```PowerShell
+$PROFILE | gm | ? membertype -eq noteproperty
+```
 
 ### Uninstall
 
