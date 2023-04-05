@@ -1,35 +1,36 @@
-﻿Function Count-Rows {
-    
+
+<#
+
+Use it like
+
+Count-Rows -Path "C:\Users\Florian\Downloads\Data\People.csv"
+
+#>
+Function Count-Rows {
+
     param(
-         [Parameter(Mandatory=$true)][string]$inputPath # file to split
-        ,[Parameter(Mandatory=$false)][bool]$header = $true # file has a header?
+        [Parameter(Mandatory=$false)][string]$Path
     )
 
-    # get the file object
-    $file = Get-Item -Path $inputPath
+    $c = [long]0
+    <#
+    Get-Content -Path $Path -ReadCount 1000 | ForEach {
+        $c += $_.Count
+    }
+    #>
 
-    # initiate the streamreader
-    $reader = New-Object System.IO.StreamReader($file.FullName, [System.Text.Encoding]::UTF8)
+    $reader = New-Object System.IO.StreamReader($Path, [System.Text.Encoding]::UTF8)
+    #[void]$reader.ReadLine() # Skip first line.
 
-    # stream through the rows
-    $i = 0
-    while ( $reader.Peek() -ge 0 ) {
-        $reader.ReadLine() > $null
-        $i++
+    # Go through all lines
+    while ($reader.Peek() -ge 0) {
+        [void]$reader.ReadLine()
+        $c += 1
     }
 
-    # close the streamreader
     $reader.Close()
 
-    # subtract one, if there should be a header
-    if ( $header ) {
-        $i -= 1
-    }
-
-    # return the no of rows
-    return [long]$i
+    # Return
+    return $c
 
 }
-
-#$f = "c:\faststats\Publish\Handel\system\Deliveries\PowerShell_252060_08af910e-6381-4b0d-a2bb-73b045eb6b79.txt"
-#Count-Rows -inputPath $f -header $true
