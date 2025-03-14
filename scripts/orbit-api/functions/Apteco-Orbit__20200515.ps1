@@ -9,15 +9,36 @@ Requisites
 
 Function Get-Endpoints {
 
-    $pageSize = 50
+    $pageSize = 100
     $offset = 0
     $Script:endpoints = @()
+    $totalEndpointsCount = 0
     Do {
-        $uri = "$( $settings.base )About/Endpoints?excludeEndpointsWithNoLicenceRequirements=false&excludeEndpointsWithNoRoleRequirements=false&count=$( $pageSize )&offset=$( $offset )"
-        $res = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json; charset=utf-8" -Verbose
-        $Script:endpoints += $res.list
-        $offset += $pageSize
-    } Until ( $Script:endpoints.count -eq $res.totalCount )
+
+        try {
+
+                # Create the url
+                $uri = "$( $settings.base )About/Endpoints?excludeEndpointsWithNoLicenceRequirements=false&excludeEndpointsWithNoRoleRequirements=false&count=$( $pageSize )&offset=$( $offset )"
+                $uri
+
+                # Prepare already for the next call
+                $Script:endpoints += $res.list
+                $offset += $pageSize
+
+                # Do the call so in case it creates an error, jump to the next page url
+                $res = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json; charset=utf-8" -Verbose
+
+                If ( $totalEndpointsCount -eq 0 ) {
+                    $totalEndpointsCount = $res.totalCount
+                }
+            
+        } catch {
+            Write-Host "Error with $( $uri )"
+            Continue
+        }
+
+    #} Until ( $Script:endpoints.count -eq $res.totalCount )
+    } Until ( $offset -ge $totalEndpointsCount )
 
     #$Script:endpoints | out-gridview
 
@@ -31,7 +52,7 @@ Function Get-Endpoint{
         [String]$Key
     )
     
-    $Script:endpoints | where { $_.name -eq $Key }
+    $Script:endpoints | where { $_.name -eq $Key } | Select -first 1
 
 }
 
@@ -71,7 +92,8 @@ Function Resolve-Url {
                 $uri += "&"
             }
 
-            $uri += "$( $_ )=$( [System.Web.HttpUtility]::UrlEncode($query[$_]) )"            
+            $uri += "$( $_ )=$( [System.Web.HttpUtility]::UrlEncode($query[$_]) )"
+            #$uri += "$( $_ )=$( [uri]::EscapeDataString($query[$_]) )"
 
             $i+=1
 
@@ -87,8 +109,9 @@ Function Create-AptecoSession {
     # LOAD ENDPOINTS
     #-----------------------------------------------
 
-    Get-Endpoints
-
+    If ( $Script:endpoints -eq $null ) {
+        Get-Endpoints
+    }
 
     #-----------------------------------------------
     # LOAD CREDENTIALS
@@ -242,7 +265,9 @@ Function Get-AptecoSession {
 
         }
 
-        Get-Endpoints
+        If ( $Script:endpoints -eq $null ) {
+            Get-Endpoints
+        }
 
     }
     

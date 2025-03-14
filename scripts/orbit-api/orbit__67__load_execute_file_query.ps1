@@ -72,7 +72,15 @@ $chooseRoot = $systemRoot.list | Out-GridView -PassThru
 $params = @{
     dataViewName=$dataview
     systemName=$system
+
     directoryPath=$chooseRoot.path
+
+    offset=10
+    count=30
+
+    directoryPath="$( $chooseRoot.path )/Test"
+
+    
 }
 $query = @{
     offset=0
@@ -85,8 +93,9 @@ $files.list | ft
 
 # Choose a selection file
 $chooseFile = $files.list | where { $_.type -in @("Selection") } | Out-GridView -PassThru
+#$chooseFile = $files.list | where { $_.type -in @("Urn") } | Out-GridView -PassThru
 #$chooseFile = $files.list | where { $_.name -eq "ActiveCustomers.xml" }
-$chooseFile = $files.list | where { $_.type -in @("Cube") } | Out-GridView -PassThru
+#$chooseFile = $files.list | where { $_.type -in @("Cube") } | Out-GridView -PassThru
 
 
 #-----------------------------------------------

@@ -93,6 +93,7 @@ $folderContent = Invoke-Apteco -key "GetFolder" -additional @{dataViewName=$data
 $folderContent.list.variable | ft
 #$folderContent.list.variable | Out-GridView
 
+
 #-----------------------------------------------
 # GET ALL AT ONCE
 #-----------------------------------------------

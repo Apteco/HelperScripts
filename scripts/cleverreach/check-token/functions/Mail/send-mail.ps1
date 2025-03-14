@@ -31,6 +31,8 @@ $splattedArguments = @{
 Send-Mail @splattedArguments # note the @ instead of $
 
 #>
+
+# TODO [ ] allow sending of mails without credentials
 Function Send-Mail {
 
     [CmdLetBinding()] #[CmdLetBinding(SupportsShouldProcess)]

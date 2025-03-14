@@ -88,6 +88,37 @@ $files.list | ft
 # Choose a file
 $chooseFile = $files.list | where { $_.type -in @("Selection") } | Out-GridView -PassThru
 #$chooseFile = $files.list | where { $_.name -eq "ActiveCustomers.xml" }
+exit 0
+#-----------------------------------------------
+# Filter Query
+#-----------------------------------------------
+
+$filterquery = @"
+{
+    "selection":  {
+                      "ancestorCounts":  false,
+                      "recordSet":  null,
+                      "rule":  null,
+                      "rfv":  null,
+                      "nPer":  {
+                                   "recency":  {
+                                                   "variableName":  "peGeschl",
+                                                   "sequence":  "2\t1\t!",
+                                                   "direction":  "First",
+                                                   "value":  1,
+                                                   "distinct":  false
+                                               },
+                                   "groupingTableName":  "Haushalte",
+                                   "transactionalTableName":  "Personen"
+                               },
+                      "topN":  null,
+                      "limits":  null,
+                      "tableName":  "Personen",
+                      "name":  "NPTSelection"
+                  },
+    "todayAt":  null
+}
+"@ | ConvertFrom-Json
 
 
 
@@ -102,7 +133,8 @@ $bodyJson = $body | ConvertTo-Json -Depth 8
 $chosenFileQuery = Invoke-Apteco -key "GetQueryFromFileSync" -additional @{dataViewName=$dataview;systemName=$system} -body $bodyJson
 
 # Output as json on console
-$chosenFileQuery.query | ConvertTo-Json -depth 20
+$chosenFileQuery.query | ConvertTo-Json -depth 99
+#$chosenFileQuery.query | ConvertTo-Json -depth 99 | set-content -path "tui.json" -Encoding UTF8
 
 
 ################################################
@@ -113,26 +145,28 @@ $chosenFileQuery.query | ConvertTo-Json -depth 20
 
 $browseBody = @{
   "baseQuery"= $chosenFileQuery.query
-  "resolveTableName"="Customers"
+  #"filterQuery"= $filterquery
+  #"isDefaultResolveTableName" = $false
+  "resolveTableName"="Companies"
   "maximumNumberOfRowsToBrowse" = 10
   "returnBrowseRows" = $true
   "columns" = @(
     @{
       "id" = "0"
-      "variableName" = "CuEntity"
-      "columnHeader" = "URN-ID"
+      "variableName" = "co2OI7LV"
+      "columnHeader" = "HaushaltURN"
       "detail" = "Description" # Code|Description
-    },
+    } <#,
     @{
       "id" = "1"
-      "variableName" = "CuFirstn"
-      "columnHeader" = "Firstname"
+      "variableName" = "PePURN"
+      "columnHeader" = "PersonURN"
       "detail" = "Description" # Code|Description
     },
     @{
       "id" = "2"
-      "variableName" = "CuLastna"
-      "columnHeader" = "Lastname"
+      "variableName" = "peGeschl"
+      "columnHeader" = "Geschlecht"
       "detail" = "Description" # Code|Description
     },
     <#@{
@@ -158,8 +192,36 @@ $browseBody = @{
       "columnHeader" = "Prefix"
       "detail" = "Description" # Code|Description
       "unclassifiedFormat" = "Empty" # FromDesign|Spaces
+
     }
-  )
+
+  },
+    @{
+      "id" = "3"
+      #"variableName" = "Cu257JZ9"
+      "columnHeader" = "Arr"
+      "detail" = "Description" # Code|Description
+      #"unclassifiedFormat" = "Spaces" # FromDesign|Spaces
+      "type" = "Expression"
+      #"arrayIndex" = 0
+      "expression"='DescOf([cu257JZ9])'
+    },
+    @{
+      "id" = "4"
+      "variableName" = "PeVornam"
+      "columnHeader" = "Vorname"
+      "detail" = "Description" # Code|Description
+      #"unclassifiedFormat" = "Space" # FromDesign|Spaces
+    },
+    @{
+      "id" = "5"
+      "variableName" = "PeNachna"
+      "columnHeader" = "Nachname"
+      "detail" = "Description" # Code|Description
+      "unclassifiedFormat" = "Empty" # FromDesign|Spaces
+    }#>
+
+    )
   "limits" = @{
     "sampling" = "All"
     "stopAtLimit" = $true
@@ -172,6 +234,7 @@ $browseBody = @{
       "denominator" = 0
     }
   }
+
 }
 
 $query = @{
@@ -204,11 +267,84 @@ $exportBody = $browseBody + @{
     "authorisationCode" = ""
     "exportExtraName" = ""
   }
+
+  #"generateUrnFile" = $true
+
 }
 
-$exportBodyJson = $exportBody | ConvertTo-Json -Depth 20
+$query = @{
+  "returnDefinition" = "true"
+
+}
+
+$browseBodyJson = $browseBody | ConvertTo-Json -Depth 20
+$browseQuery = Invoke-Apteco -key "ExportSync" -additional @{dataViewName=$dataview;systemName=$system;returnDefinition="true"} -body $browseBodyJson -query $query
+$browseQuery | ConvertTo-Json -Depth 20
+
+$browseQuery.rows.descriptions | ConvertFrom-Csv -Delimiter "`t" -Header $browseQuery.export.columns.columnHeader 
+
+exit 0
+################################################
+#
+# EXPORT A SELECTION AS CSV AND/OR URN FILE
+#
+################################################
+
+$filename = "$( [datetime]::Now.ToString("yyyyMMddHHmmss") ).csv"
+
+$exportBody = $browseBody + @{
+  "pathToExportTo" = "Private/$( $filename )"
+  "pathToExportUrnFileTo" = "Private/$( $filename ).urn"
+  "output" = @{
+    "format" = "CSV" # CSV|URN|XLSX
+    "delimiter" = ";"
+    "alphaEncloser" = """"
+    "numericEncloser" = ""
+    "authorisationCode" = ""
+    "exportExtraName" = ""
+  }
+
+}
+
+$browseBodyJson = $browseBody | ConvertTo-Json -Depth 99
+#$browseBodyJson = $browseBody | ConvertTo-Json -Depth 99 | Set-Content ".\ttt2.json"
+
+$browseQuery = Invoke-Apteco -key "ExportSync" -additional @{dataViewName=$dataview;systemName=$system;returnDefinition="true"} -body $browseBodyJson -query $query
+$browseQuery | ConvertTo-Json -Depth 20
+
+$browseQuery.rows.descriptions | ConvertFrom-Csv -Delimiter "`t" -Header $browseQuery.export.columns.columnHeader 
+
+exit 0
+################################################
+#
+# EXPORT A SELECTION AS CSV AND/OR URN FILE
+#
+################################################
+
+$filename = "$( [datetime]::Now.ToString("yyyyMMddHHmmss") ).csv"
+
+
+
+
+$exportBody = $browseBody + @{
+  "pathToExportTo" = "Public/$( $filename )"
+  "pathToExportUrnFileTo" = $null #"Public/$( $filename ).urn"
+  "output" = @{
+    "format" = "CSV" # CSV|URN|XLSX
+    "delimiter" = ","
+    "alphaEncloser" = ""
+    "numericEncloser" = ""
+    "authorisationCode" = ""
+    "exportExtraName" = "RemoveQuotes"
+  }
+
+}
+
+$exportBodyJson = $exportBody | ConvertTo-Json -Depth 99
+#$exportBody | ConvertTo-Json -Depth 99 | Set-Content -Path .\tri.json -Encoding UTF8
 $exportQuery = Invoke-Apteco -key "ExportSync" -additional @{dataViewName=$dataview;systemName=$system;returnDefinition="true"} -body $exportBodyJson
-$exportQuery | ConvertTo-Json -Depth 20
+
+$exportQuery | ConvertTo-Json -Depth 99
 
 
 #-----------------------------------------------

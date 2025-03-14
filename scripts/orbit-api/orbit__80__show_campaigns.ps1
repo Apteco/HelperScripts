@@ -43,13 +43,14 @@ $systems = Invoke-Apteco -key "GetFastStatsSystems" -additional @{dataViewName=$
 # Choose system 
 # TODO [ ] is viewName the correct one?
 if ( $systems.totalCount -gt 1 ) {
-    $system = ( $systems.list | Out-GridView -PassThru ).viewName
+    $system = ( $systems.list | Out-GridView -PassThru ).systemName
 } elseif ( $systems.totalCount -eq 0 ) {
     "No systems"
     exit 0
 } else {
-    $system = $systems.list[0].viewName
+    $system = $systems.list[0].systemName
 }
+
 
 
 ################################################

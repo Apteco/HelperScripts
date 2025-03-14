@@ -172,14 +172,13 @@ Function sqlite-Load-Data {
        ,[Parameter(Mandatory=$true)][System.Data.SQLite.SQLiteConnection]$connection  # switch if it should open read only
     )
 
-    $cmd = New-Object -TypeName System.Data.SQLite.SQLiteCommand
+    $cmd = $connection.CreateCommand()
     $cmd.CommandText = $sqlCommand
-    $cmd.Connection = $connection
 
-    $dataAdapter = New-Object -TypeName System.Data.SQLite.SQLiteDataAdapter
+    $dataAdapter = [System.Data.SQLite.SQLiteDataAdapter]::new()
     $dataAdapter.SelectCommand = $cmd
 
-    $data = New-Object -TypeName System.Data.DataSet
+    $data = [System.Data.DataSet]::new()
     [void]$dataAdapter.fill($data)
 
     $data.tables.rows

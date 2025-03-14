@@ -380,6 +380,8 @@ $mailSettings = @{
     username = "admin@example.com"
     password = $smtpPassEncrypted
     deactivateServerCertificateValidation = $true # $true|$false
+    useSsl = $true  # $true|$false
+    useCredentials = $true # $true|$false -> sometimes you have mailservers without user/pass 
 }
 
 
@@ -391,6 +393,7 @@ $settings = @{
     
     # general
     "base" = "https://rest.cleverreach.com/v3/"
+    "connectionTestUrl" = "https://rest.cleverreach.com/v3/debug/validate.json"
     "providername" = "CleverReach"
     "logfile" = $logfile
     "contentType" = "application/json; charset=utf-8"
