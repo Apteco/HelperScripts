@@ -72,9 +72,21 @@ $chooseRoot = $systemRoot.list | Out-GridView -PassThru
 $params = @{
     dataViewName=$dataview
     systemName=$system
+<<<<<<< Updated upstream
     directoryPath=$chooseRoot.path
+<<<<<<< Updated upstream
     offset=10
     count=30
+=======
+<<<<<<< Updated upstream
+=======
+    offset=10
+    count=30
+=======
+    directoryPath="$( $chooseRoot.path )/Test"
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 }
 $files = Invoke-Apteco -key "GetFiles" -additional $params
 
@@ -83,7 +95,30 @@ $files.list | ft
 
 # Choose a selection file
 $chooseFile = $files.list | where { $_.type -in @("Selection") } | Out-GridView -PassThru
+#$chooseFile = $files.list | where { $_.type -in @("Urn") } | Out-GridView -PassThru
 #$chooseFile = $files.list | where { $_.name -eq "ActiveCustomers.xml" }
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+$chooseFile = $files.list | where { $_.type -in @("Cube") } | Out-GridView -PassThru
+=======
+<<<<<<< Updated upstream
+=======
+#$chooseFile = $files.list | where { $_.type -in @("Cube") } | Out-GridView -PassThru
+>>>>>>> Stashed changes
+
+
+#-----------------------------------------------
+# LOAD RAW CONTENT OF A SELECTION (CAN BE XML,CSV,...)
+#-----------------------------------------------
+
+$chosenFileContent = Invoke-Apteco -key "GetFile" -additional @{dataViewName=$dataview;systemName=$system;filePath=$chooseFile.path}
+$chosenFileContent
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
 
 #-----------------------------------------------

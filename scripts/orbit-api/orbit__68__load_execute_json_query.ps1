@@ -97,7 +97,7 @@ $bodyJson = $body | ConvertTo-Json -Depth 8
 $chosenFileQuery = Invoke-Apteco -key "GetQueryFromFileSync" -additional @{dataViewName=$dataview;systemName=$system} -body $bodyJson
 
 # Output as json on console
-$chosenFileQuery.query | ConvertTo-Json -depth 20
+$chosenFileQuery.query | ConvertTo-Json -depth 20 | set-content -Path "tst.json" -Encoding UTF8
 
 
 #-----------------------------------------------
@@ -111,7 +111,7 @@ $body = $chosenFileQuery.query
 $body.selection.rule.clause.logic.operands.criteria.where({$_.variableName -eq "CuEmail"}).valueRules.listRule.list = "Florian" #"apteco"
 
 # Do the call
-$bodyJson = $body | ConvertTo-Json -Depth 20
+$bodyJson = $j # $body | ConvertTo-Json -Depth 20
 $countQuery = Invoke-Apteco -key "CountQuerySync" -additional @{dataViewName=$dataview;systemName=$system} -body $bodyJson
 
 # Show the results
@@ -129,42 +129,92 @@ exit 0
 # Example json query with an expression as json
 $j = @"
 {
-  "selection": {
-      "ancestorCounts": false,
-      "rule": {
-          "clause": {
-              "criteria": {
-                  "include": true,
-                  "logic": "OR",
-                  "ignoreCase": false,
-                  "textMatchType": "Is",
-                  "valueRules": [
-                      {
-                          "listRule": {
-                              "bandingType": "None",
-                              "list": ">=5",
-                              "variableName": null
-                          },
-                          "name": "Distanz von >=5"
-                      }
-                  ],
-                  "expressionRule": {
-                      "tableName": "Customers",
-                      "queries": [],
-                      "desc": "Distanz",
-                      "displayText": "GeoDist(\n\t47,424298;9,386160;\n\t47,415401;9,261395;\n\t\"k\"\n)",
-                      "serverText": "GeoDist(\n\t47.424298,9.386160,\n\t47.415401,9.261395,\n\t\"k\"\n)",
-                      "queryDescriptions": [],
-                      "outputType": "Double",
-                      "stringSize": 20
-                  },
-                  "tableName": "Customers",
-                  "name": "Distanz von >=5"
-              }
-          }
-      },
-      "tableName": "Customers",
-      "name": "Dist"
-  }
+    "selection": {
+        "ancestorCounts": false,
+        "recordSet": null,
+        "rule": {
+            "clause": {
+                "logic": {
+                    "operation": "OR",
+                    "operands": [
+                        {
+                            "logic": null,
+                            "criteria": {
+                                "variableName": "HaVornam",
+                                "path": "",
+                                "include": true,
+                                "logic": "OR",
+                                "ignoreCase": true,
+                                "textMatchType": "Contains",
+                                "valueRules": [
+                                    {
+                                        "ageRule": null,
+                                        "dateRule": null,
+                                        "listRule": {
+                                            "bandingType": "None",
+                                            "list": "Florian\tAnne",
+                                            "variableName": "HaVornam"
+                                        },
+                                        "timeRule": null,
+                                        "predefinedRule": null,
+                                        "name": "Vorname von Florian or Anne"
+                                    }
+                                ],
+                                "expressionRule": null,
+                                "todayAt": null,
+                                "tableName": "Kunden",
+                                "name": "Vorname von Florian or Anne"
+                            },
+                            "subSelection": null,
+                            "audienceReference": null
+                        },
+                        {
+                            "logic": null,
+                            "criteria": {
+                                "variableName": "HaNachna",
+                                "path": "",
+                                "include": true,
+                                "logic": "OR",
+                                "ignoreCase": true,
+                                "textMatchType": "Contains",
+                                "valueRules": [
+                                    {
+                                        "ageRule": null,
+                                        "dateRule": null,
+                                        "listRule": {
+                                            "bandingType": "None",
+                                            "list": "Bracht",
+                                            "variableName": "HaNachna"
+                                        },
+                                        "timeRule": null,
+                                        "predefinedRule": null,
+                                        "name": "Nachname von Bracht"
+                                    }
+                                ],
+                                "expressionRule": null,
+                                "todayAt": null,
+                                "tableName": "Kunden",
+                                "name": "Nachname von Bracht"
+                            },
+                            "subSelection": null,
+                            "audienceReference": null
+                        }
+                    ],
+                    "tableName": "Kunden",
+                    "name": "Vorname OR Nachname"
+                },
+                "criteria": null,
+                "subSelection": null,
+                "audienceReference": null
+            }
+        },
+        "rfv": null,
+        "nPer": null,
+        "topN": null,
+        "limits": null,
+        "tableName": "Kunden",
+        "name": "Neue Selektion 17"
+    },
+    "todayAt": null
 }
 "@
