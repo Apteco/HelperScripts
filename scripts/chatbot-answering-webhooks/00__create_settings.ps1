@@ -217,6 +217,7 @@ $settings = @{
     # Settings for sqlite
     "sqliteDll" =  "$( $scriptPath )/lib/nuget/System.Data.SQLite.dll"
     "sqliteDb" = "$( $scriptPath )/test.sqlite" # :memory:
+    "datastore" = "$( $scriptPath )/data_lookup.sqlite"
     
     # Upload settings
     #"uploadsFolder" = "$( $scriptPath )\uploads"
