@@ -21,21 +21,23 @@ It provides detailed status updates throughout each step, ensuring transparency 
   -LoginBaseUrl "http://localhost:60080" \
   -ApiBaseUrl "https://localhost:7236" \
   -DataViewName "holidays"
+  -WaitForOrbit $false
 ```
 
 ---
 
 ## 🧾 Parameters
 
-| Name                 | Type     | Required | Description                                                           |
-| -------------------- | -------- | -------- | --------------------------------------------------------------------- |
-| `UserLogin`          | `string` | ✅       | Username for authentication.                                          |
-| `Password`           | `string` | ✅       | Password for authentication.                                          |
-| `DataSourceIds`      | `int[]`  | ✅       | Array of data source IDs to import.                                   |
-| `SystemDefinitionId` | `int`    | ✅       | ID of the system definition to build.                                 |
-| `LoginBaseUrl`       | `string` | ❌       | Base URL for login API (default: `http://localhost:60080`).           |
-| `ApiBaseUrl`         | `string` | ❌       | Base URL for data and build APIs (default: `https://localhost:7236`). |
-| `DataViewName`       | `string` | ❌       | Name of the data view context (default: `"holidays"`).                |
+| Name                 | Type     | Required | Description                                                               |
+| -------------------- | -------- | -------- | ------------------------------------------------------------------------- |
+| `UserLogin`          | `string` | ✅       | Username for authentication.                                              |
+| `Password`           | `string` | ✅       | Password for authentication.                                              |
+| `DataSourceIds`      | `int[]`  | ✅       | Array of data source IDs to import.                                       |
+| `SystemDefinitionId` | `int`    | ✅       | ID of the system definition to build.                                     |
+| `LoginBaseUrl`       | `string` | ❌       | Base URL for login API (default: `http://localhost:60080`).               |
+| `ApiBaseUrl`         | `string` | ❌       | Base URL for data and build APIs (default: `https://localhost:7236`).     |
+| `DataViewName`       | `string` | ❌       | Name of the data view context (default: `"holidays"`).                    |
+| `WaitForOrbit`       | `bool`   | ❌       | Should the script keep polling until Orbit has updated (default: `false`) |
 
 ---
 

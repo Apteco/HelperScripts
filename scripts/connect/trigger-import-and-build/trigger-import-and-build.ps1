@@ -21,7 +21,10 @@ param (
     [string]$ApiBaseUrl = "https://localhost:7236",
     
     [Parameter(Mandatory=$false)]
-    [string]$DataViewName = "holidays"
+    [string]$DataViewName = "holidays",
+
+    [Parameter(Mandatory=$false)]
+    [bool]$WaitForOrbit = $false
 )
 
 # Login function
@@ -144,7 +147,8 @@ function Start-SystemBuild {
         [int]$SystemDefinitionId,
         [string]$DataViewName,
         [string]$ApiBaseUrl,
-        [bool]$AutoDeploy = $true
+        [bool]$AutoDeploy = $true,
+        [bool]$WaitForOrbit = $false
     )
 
     # Build the system build URL with the data view name
@@ -170,7 +174,7 @@ function Start-SystemBuild {
         $systemDeploymentId = Get-DeploymentId -Headers $Headers -SystemBuildId $systemBuildId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl
         
         # Wait for deployment to complete
-        Wait-ForDeploymentCompletion -Headers $Headers -SystemDeploymentId $systemDeploymentId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl
+        Wait-ForDeploymentCompletion -Headers $Headers -SystemDeploymentId $systemDeploymentId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl -WaitForOrbit $WaitForOrbit
         
         return $systemBuildId
     }
@@ -250,37 +254,44 @@ function Get-DeploymentId {
 
 # Wait for deployment to complete
 function Wait-ForDeploymentCompletion {
-    param (
-        [hashtable]$Headers,
-        [int]$SystemDeploymentId,
-        [string]$DataViewName,
-        [string]$ApiBaseUrl,
-        [int]$CheckIntervalSeconds = 5
-    )
+  param (
+      [hashtable]$Headers,
+      [int]$SystemDeploymentId,
+      [string]$DataViewName,
+      [string]$ApiBaseUrl,
+      [int]$CheckIntervalSeconds = 5,
+      [bool]$WaitForOrbit = $false
+  )
 
-    while ($true) {
-        # Define the endpoint to check the status of the deployment
-        $statusUrl = "$ApiBaseUrl/$DataViewName/SystemDeployments/$SystemDeploymentId/Status"
+  while ($true) {
+      $statusUrl = "$ApiBaseUrl/$DataViewName/SystemDeployments/$SystemDeploymentId/Status"
 
-        try {
-            # Make the GET request to check the status
-            $statusResponse = Invoke-RestMethod -Uri $statusUrl -Method Get -Headers $Headers
-            Write-Host "Deployment Status Response: $statusResponse"
+      try {
+          $statusResponse = Invoke-RestMethod -Uri $statusUrl -Method Get -Headers $Headers
+          Write-Host "Deployment Status Response: $statusResponse"
 
-            # Check if the status is 'Done'
-            if ($statusResponse.state -eq "Done") {
-                Write-Host "Deployment completed successfully."
-                break
-            }
-        }
-        catch {
-            Write-Host "Error occurred while checking deployment status: $_"
-        }
+          if ($statusResponse.state -eq "Done") {
+              if ($WaitForOrbit) {
+                  if ($statusResponse.hasDeployedToOrbit -eq $true) {
+                      Write-Host "Deployment completed and deployed to orbit."
+                      break
+                  } else {
+                      Write-Host "Deployment done, waiting for orbit deployment..."
+                  }
+              } else {
+                  Write-Host "Deployment completed successfully."
+                  break
+              }
+          }
+      }
+      catch {
+          Write-Host "Error occurred while checking deployment status: $_"
+      }
 
-        # Wait before checking again
-        Start-Sleep -Seconds $CheckIntervalSeconds
-    }
+      Start-Sleep -Seconds $CheckIntervalSeconds
+  }
 }
+
 
 # Main execution
 
@@ -291,6 +302,7 @@ Write-Host "SystemDefinitionId: $SystemDefinitionId"
 Write-Host "DataViewName: $DataViewName"
 Write-Host "LoginBaseUrl: $LoginBaseUrl"
 Write-Host "ApiBaseUrl: $ApiBaseUrl"
+Write-Host "WaitForOrbit: $WaitForOrbit"
 
 # Step 1: Login and get authentication headers
 $headers = Connect-DataView -UserLogin $UserLogin -Password $Password -DataViewName $DataViewName -LoginBaseUrl $LoginBaseUrl
@@ -320,7 +332,7 @@ if (-not $allImportsSuccessful) {
 }
 
 # Step 3: Start system build and deployment
-$systemBuildId = Start-SystemBuild -Headers $headers -SystemDefinitionId $SystemDefinitionId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl
+$systemBuildId = Start-SystemBuild -Headers $headers -SystemDefinitionId $SystemDefinitionId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl -WaitForOrbit $WaitForOrbit
 
 if ($null -eq $systemBuildId) {
     Write-Host "System build failed. Exiting workflow."
