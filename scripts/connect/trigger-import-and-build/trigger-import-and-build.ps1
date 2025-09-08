@@ -10,6 +10,9 @@ param (
     
     [Parameter(Mandatory=$true)]
     [int[]]$DataSourceIds,
+
+    [Parameter(Mandatory=$true)]
+    [int[]]$CDPTableMappingIds,
     
     [Parameter(Mandatory=$true)]
     [int]$SystemDefinitionId,
@@ -106,6 +109,40 @@ function Import-Data {
     }
 }
 
+# Wait for cdp import to complete
+function Wait-ForCDPImportCompletion {
+    param (
+        [hashtable]$Headers,
+        [int]$CDPImportId,
+        [string]$DataViewName,
+        [string]$ApiBaseUrl,
+        [int]$CheckIntervalSeconds = 5
+    )
+
+    while ($true) {
+        # Define the endpoint to check the status of the data import
+        $statusUrl = "$ApiBaseUrl/$DataViewName/CDP/Imports/$CDPImportId/Status"
+
+        try {
+            # Make the GET request to check the status
+            $statusResponse = Invoke-RestMethod -Uri $statusUrl -Method Get -Headers $Headers
+            Write-Host "CDP Import Status Response: $statusResponse"
+
+            # Check if the status is 'Done'
+            if ($statusResponse.state -eq "Done") {
+                Write-Host "CDP Import completed successfully."
+                break
+            }
+        }
+        catch {
+            Write-Host "Error occurred while checking CDP import status: $_"
+        }
+
+        # Wait before checking again
+        Start-Sleep -Seconds $CheckIntervalSeconds
+    }
+}
+
 # Wait for import to complete
 function Wait-ForImportCompletion {
     param (
@@ -180,6 +217,41 @@ function Start-SystemBuild {
     }
     catch {
         Write-Host "Error occurred during system build: $_"
+        return $null
+    }
+}
+
+# Trigger cdp import function
+function Start-CdpImport {
+    param (
+        [hashtable]$Headers,
+        [int]$TableMappingId,
+        [string]$DataViewName,
+        [string]$ApiBaseUrl,
+        [bool]$AutoDeploy = $true,
+        [bool]$WaitForOrbit = $false
+    )
+
+    
+    $cdpImportUrl = "$ApiBaseUrl/$DataViewName/CDP/Imports"
+
+    $body = @{
+        "tableMappingId" = $TableMappingId
+    } | ConvertTo-Json
+
+    try {
+        # Make the POST request
+        $response = Invoke-RestMethod -Uri $cdpImportUrl -Method Post -Headers $Headers -Body $body
+        $cdpImportId = $response.id
+        Write-Host "CDP Import ID: $cdpImportId"
+
+        # Wait for the CDP import to complete
+        Wait-ForCDPImportCompletion -Headers $Headers -CdpImportId $cdpImportId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl
+
+        return $cdpImportId
+    }
+    catch {
+        Write-Host "Error occurred during CDP import: $_"
         return $null
     }
 }
@@ -298,6 +370,7 @@ function Wait-ForDeploymentCompletion {
 Write-Host "Starting workflow with the following parameters:"
 Write-Host "UserLogin: $UserLogin"
 Write-Host "DataSourceIds: $($DataSourceIds -join ', ')"
+Write-Host "CDPTableMappingIds: $($CDPTableMappingIds -join ', ')"
 Write-Host "SystemDefinitionId: $SystemDefinitionId"
 Write-Host "DataViewName: $DataViewName"
 Write-Host "LoginBaseUrl: $LoginBaseUrl"
@@ -331,7 +404,25 @@ if (-not $allImportsSuccessful) {
     Write-Host "One or more data imports failed. Continuing with system build..."
 }
 
-# Step 3: Start system build and deployment
+# Step 3: CDP Import data - either sequentially or in parallel
+$allCDPImportsSuccessful = $true
+
+Write-Host "Starting sequential CDP data import for all CDP table mappings..."
+foreach ($cdpTableMappingId in $CDPTableMappingIds) {
+    Write-Host "Processing CDPTableMappingId: $cdpTableMappingId"
+    $cdpImportId = Start-CdpImport -Headers $headers -TableMappingId $cdpTableMappingId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl
+
+    if ($null -eq $cdpImportId) {
+        Write-Host "Data import failed for CDPTableMappingId: $cdpTableMappingId. Continuing with next CDP table mapping."
+        $allCDPImportsSuccessful = $false
+    }
+}
+
+if (-not $allCDPImportsSuccessful) {
+    Write-Host "One or more CDP data imports failed. Continuing with system build..."
+}
+
+# Step 4: Start system build and deployment
 $systemBuildId = Start-SystemBuild -Headers $headers -SystemDefinitionId $SystemDefinitionId -DataViewName $DataViewName -ApiBaseUrl $ApiBaseUrl -WaitForOrbit $WaitForOrbit
 
 if ($null -eq $systemBuildId) {

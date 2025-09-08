@@ -17,6 +17,7 @@ It provides detailed status updates throughout each step, ensuring transparency 
   -UserLogin "admin" \
   -Password "password" \
   -DataSourceIds @(1,2,3) \
+  -CDPTableMappingIds @(1,2)
   -SystemDefinitionId 1 \
   -LoginBaseUrl "http://localhost:60080" \
   -ApiBaseUrl "https://localhost:7236" \
@@ -33,6 +34,7 @@ It provides detailed status updates throughout each step, ensuring transparency 
 | `UserLogin`          | `string` | ✅       | Username for authentication.                                              |
 | `Password`           | `string` | ✅       | Password for authentication.                                              |
 | `DataSourceIds`      | `int[]`  | ✅       | Array of data source IDs to import.                                       |
+| `CDPTableMappingIds` | `int[]`  | ✅       | Array of CDP table mappings to import.                                    |
 | `SystemDefinitionId` | `int`    | ✅       | ID of the system definition to build.                                     |
 | `LoginBaseUrl`       | `string` | ❌       | Base URL for login API (default: `http://localhost:60080`).               |
 | `ApiBaseUrl`         | `string` | ❌       | Base URL for data and build APIs (default: `https://localhost:7236`).     |
@@ -49,7 +51,10 @@ It provides detailed status updates throughout each step, ensuring transparency 
 2. **Data Import**  
    Iterates over each `DataSourceId` and performs a `Replace` import. Waits for each import to complete before moving on.
 
-3. **System Build & Deployment**  
+3. **CDP Table Mapping Import**
+   Iterates over each `CDPTableMappingId` and performs an import from the associated data source. Waits for each import to complete to the CDP (inc ID resolution etc) before moving on.
+
+4. **System Build & Deployment**  
    Initiates a system build using the specified `SystemDefinitionId`, waits for completion, retrieves the deployment ID, and then waits for deployment to finish.
 
 ---
@@ -58,6 +63,7 @@ It provides detailed status updates throughout each step, ensuring transparency 
 
 - Displays the access token (for debugging).
 - Logs import status for each data source.
+- Logs cdp import status for each CDP table mapping import
 - Shows build and deployment status updates.
 - Exits with code `0` if successful, `1` on failure.
 
@@ -66,7 +72,8 @@ It provides detailed status updates throughout each step, ensuring transparency 
 ## 📝 Notes
 
 - You can get the Data Source and System Definition IDs from the URL inside Connect, these won't change.
-- Data import and system build operations are performed **sequentially**.
+- You can get the table mapping Id from inside the connect app e.g. www.myorbitinstance.com/Connect/data-mappings/customer-data/{id}
+- All import and system build operations are performed **sequentially**.
 - Errors during import or build do not halt the script, but failures are clearly indicated.
 - Ensure that both the login and API base URLs are reachable from your environment.
 
